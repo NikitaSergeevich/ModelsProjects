@@ -1,0 +1,296 @@
+//
+// Innopolis University. Models of Software Systems
+// MSIT-SE-M-01: FSP model of a simple infusion pump
+//
+// ASSUMPTIONS
+// - The user can choose, in the setup phase, which item of info to enter next.
+// - The simple enter_value action is a simple number pad where the user enters
+// numeric values.
+// - There exist 'set' and 'cancel' buttons, which are the targets of press_set
+// and press_cancel.
+// - When the user turns the unit off, the unit will be in a state as if it was
+// just plugged in.
+//
+
+//
+// Set of actions that the user of the LTSA tool can control in an
+// animation of this model.
+//
+menu UserControlMenu = {
+change_settings, clear_rate, confirm_settings, connect_set,
+dispense_main_med_flow, enter_value, erase_and_unlock_line,
+flow_unblocked, sound_alarm, lock_unit, plug_in, press_cancel,
+press_set, set_parameters, quite_alarm, turn_off, unlock_unit, unplug,
+flow_blocked
+}
+
+//======================
+// Constants and Ranges
+//======================
+
+//
+// States of the pump alarm
+// Assumption: Silenced alarm is not zero volume but quite volume
+// 
+const AlarmActivated = 0 // Alarm currently active
+const AlarmSilenced = 1 // Alarm currently inactive
+
+range AlarmStateT = AlarmActivated .. AlarmSilenced
+
+
+//
+// States of the pump settings
+//
+const ParamsNotSet = 2 // pump parameters not set yet
+const ParamsSet = 3 // pump parameters already set
+
+range ParamsStateT = ParamsNotSet .. ParamsSet
+
+//
+// Locked/unlocked states of a line with respect to a pump channel
+//
+const LineUnlocked = 4 // line not locked into a pump channel
+const LineLocked = 5 // line locked into a pump channel
+
+range LineLockStateT = LineUnlocked .. LineLocked
+
+//
+// Locked/unlocked states of the pump unit
+//
+const UnitUnlocked = 6 // the keypad of the pump is not locked
+const UnitLocked = 7 // the keypad of the pump is locked
+
+range UnitLockStateT = UnitUnlocked .. UnitLocked
+
+//
+// Notifications types
+//
+
+const MedicineEnded = 8  
+const Pinched   = 9   
+const Plugged = 10  
+const EndOfTreatmentTime   = 11   
+const PostError = 12
+const SystemCheckError = 13
+
+range ErrorType = MedicineEnded .. SystemCheckError
+
+//
+// States of power source
+// Assumption: 20% of battery is enough for 4 hours of working 
+// (according to requirements from 
+// "Generic Infusion Pump Hazard Analysis and Safety Requirements")
+//
+const Electricity = 20 	// Pump uses AC power
+const Battery = 21 	// Pump uses battery with charge is enough for more than 4 hours
+const LowBattery = 22 	// Pump uses battery with charge is enough for less than 4 hours
+
+range PowerMode = Electricity .. LowBattery
+
+//=====================
+// Process Definitions
+//=====================
+
+PUMP = UNPLUGGED[Battery],
+
+UNPLUGGED[power:PowerMode] =
+(
+plug_in -> POWER_OFF[power]
+
+),
+
+POWER_OFF[power:PowerMode] =
+(
+turn_on_and_self_check -> POST[power]
+),
+
+//POST (Power On Self Check) are done to check whether the device’s hardware is functional.
+//
+//1. CPU test
+//2. ROM / RAM CRC test
+//3. Battery test
+//4. Stuck key test
+//5. Watchdog test
+//6. Real Time Clock test
+//7. Tone test
+POST[power:PowerMode] =
+(
+check_passed -> SETUP[ParamsNotSet][LineUnlocked][power]
+|
+check_error -> ERROR[UnitUnlocked][AlarmActivated][power][PostError]
+| 
+when (power==Electricity || power==LowBattery)
+switch_to_battery -> POST[Battery]
+|
+when (power == Battery || power==LowBattery)
+switch_to_electricity -> POST[Electricity]
+|
+when (power == Battery || power==Electricity)
+switch_to_low_charged_battery -> POST[LowBattery]
+),
+
+
+//
+// Pump in setup mode:
+// - Once required pump parameters (just rate in this case) are set,
+// physical connections can be made and line can be locked
+// Assumption: Parameters == {rate, volume, treatment time} 
+//
+SETUP[params:ParamsStateT][lineLock:LineLockStateT][power:PowerMode] =
+(
+unplug -> UNPLUGGED[power]
+|
+turn_off -> POWER_OFF[power]
+|
+when (params == ParamsNotSet && lineLock == LineUnlocked)
+set_parameters  -> SETUP[ParamsSet][lineLock][power]
+|
+when (params == ParamsSet && lineLock == LineUnlocked)
+clear_rate -> SETUP[ParamsNotSet][lineLock][power]
+|
+when (params == ParamsSet && lineLock == LineUnlocked)
+connect_set_purge_air_lock_line -> SETUP[params][LineLocked][power]
+|
+connect_set -> lock_line -> SETUP[params][LineLocked][power] 
+
+|
+when (lineLock == LineLocked)
+confirm_settings -> SYSTEM_CHECK[UnitUnlocked][power]
+|
+when (lineLock == LineLocked)
+erase_and_unlock_line -> SETUP[params][LineUnlocked][power]
+| 
+when (power==Electricity || power==LowBattery)
+switch_to_battery -> SETUP[params][lineLock][Battery]
+|
+when (power == Battery || power==LowBattery)
+switch_to_electricity -> SETUP[params][lineLock][Electricity]
+|
+when (power == Battery || power==Electricity)
+switch_to_low_charged_battery -> SETUP[params][lineLock][LowBattery]
+),
+
+
+// Periodic System Check, takes very little amount of time
+// RAM test shall periodically check different sections of the RAM
+// A ROM CRC test shall periodically check different sections of the ROM 
+// CPU test shall be performed to check the processors code register.
+SYSTEM_CHECK[unitLock:UnitLockStateT][power:PowerMode] = 
+(
+check_passed -> INFUSION[unitLock][power]
+|
+check_error -> ERROR[unitLock][AlarmActivated][power][PostError]
+| 
+when (power==Electricity || power==LowBattery)
+switch_to_battery -> SYSTEM_CHECK[unitLock][Battery]
+|
+when (power == Battery || power==LowBattery)
+switch_to_electricity -> SYSTEM_CHECK[unitLock][Electricity]
+|
+when (power == Battery || power==Electricity)
+switch_to_low_charged_battery -> SYSTEM_CHECK[unitLock][LowBattery]
+),
+
+//
+// Pump in infusion mode:
+// - Always be able to turn the unit off, even if locked
+// - Allow the user to lock/unlock the unit
+// - Errors could occur with the pump (e.g., line became pinched or plugged)
+//
+INFUSION[unitLock:UnitLockStateT][power:PowerMode]=
+(
+unplug -> UNPLUGGED[power]
+|
+turn_off -> POWER_OFF[power]
+|
+when (unitLock == UnitUnlocked)
+change_settings -> SETUP[ParamsSet][LineLocked][power]
+|
+when (unitLock == UnitUnlocked)
+        lock_unit -> INFUSION[UnitLocked][power]
+|
+when (unitLock == UnitLocked)
+        unlock_unit -> INFUSION[UnitUnlocked][power]
+|
+    dispense_main_med_flow -> INFUSION[unitLock][power]
+|
+periodical_check -> SYSTEM_CHECK[unitLock][power] 
+|
+add_medicine -> ERROR[unitLock][AlarmActivated][power][MedicineEnded]
+|
+flow_pinched -> ERROR[unitLock][AlarmActivated][power][Pinched]
+|
+flow_plugged -> ERROR[unitLock][AlarmActivated][power][Plugged]
+|
+end_of_treatment_time -> ERROR[unitLock][AlarmActivated][power][EndOfTreatmentTime]
+|
+when (power==Electricity || power==LowBattery)
+switch_to_battery -> INFUSION[unitLock][Battery]
+|
+when (power == Battery || power==LowBattery)
+switch_to_electricity -> INFUSION[unitLock][Electricity]
+|
+when (power == Battery || power==Electricity)
+switch_to_low_charged_battery -> INFUSION[unitLock][LowBattery]
+),
+
+//
+// Pump stuck (medication flow suspended)
+//
+ERROR[unitLock:UnitLockStateT][alarm:AlarmStateT][power:PowerMode][error:ErrorType] =
+(
+unplug -> UNPLUGGED[power]
+|
+turn_off -> POWER_OFF[power]
+|
+when (alarm == AlarmActivated)
+        sound_alarm -> ERROR[unitLock][alarm][power][error]
+|
+when (alarm == AlarmActivated)
+        make_alarm_quiet -> ERROR[unitLock][AlarmSilenced][power][error]
+|
+when (alarm == AlarmSilenced)
+        make_alarm_loud -> ERROR[unitLock][alarm][power][error]
+|
+when (alarm == AlarmSilenced)
+        quite_alarm -> ERROR[unitLock][AlarmSilenced][power][error]
+|
+when (error == PostError)
+processing_error -> 	
+(
+    	ignore_error -> INFUSION[unitLock][power]   
+	|
+	critical_error -> POWER_OFF[power]
+)
+|
+when (error == SystemCheckError)
+processing_error -> 	
+(
+    	ignore_error -> INFUSION[unitLock][power]   
+	|
+	critical_error -> POWER_OFF[power]
+) 
+|
+when (error == MedicineEnded)
+     add_medicine -> INFUSION[unitLock][power]   
+     |
+when (error == Pinched)
+    unpinch -> INFUSION[unitLock][power] 
+    | 
+    when (error == Plugged)
+        clear_flow -> INFUSION[unitLock][power] 
+    |  
+    when (error == EndOfTreatmentTime)
+        new_timer_on -> INFUSION[unitLock][power] 
+    |  
+  
+when (power==Electricity || power==LowBattery)
+switch_to_battery -> ERROR[unitLock][alarm][Battery][error]
+|
+when (power == Battery || power==LowBattery)
+switch_to_electricity -> ERROR[unitLock][alarm][Electricity][error]
+|
+when (power == Battery || power==Electricity)
+switch_to_low_charged_battery -> ERROR[unitLock][alarm][LowBattery][error]
+)
+.
