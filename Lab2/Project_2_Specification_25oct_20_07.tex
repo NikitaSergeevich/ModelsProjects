@@ -1,0 +1,209 @@
+\documentclass{article}
+\usepackage{zed-csp}
+%\input{handout}
+
+\begin{document}
+	
+	\begin{zed}
+		
+		ALARMSTATE ::= activated | silenced | alarm_off \\
+		
+		PARAMSSTATE ::= set | not\_set \\
+		
+		UNITLOCKSTATE ::= unit\_locked | unit\_unlocked \\
+		
+		LINESLOCKSTATE ::= lines\_locked | lines\_unlocked \\
+		
+		PUMPSTATUS ::= pump\_on | pump\_off \\
+		
+		
+		ERRORSTATUS ::= ok | end\_of\_treatment\_time | post\_error | system\_check\_error \\ | run\_out\_medicine | low\_battery \\
+		
+		
+		
+		LINESTATUS ::= ok | med\_ended | pinched | plugged \\
+		
+		POWERMODE ::= electricity | battery | low\_battery | empty\_battery \\
+	\end{zed}
+	
+	//Problem - we can have only one state
+	
+	\begin{schema}{Line}
+		fluid: \nat \\
+		status: LINESTATUS	
+	\end{schema}
+	
+	\begin{zed}
+		ID::=1|2|3
+	\end{zed}
+		
+	\begin{schema}{Pump}
+		activeids : \power ID\\
+		lines : ID \pfun Line \\
+		alarmstate : ALARMSTATE \\
+		linelockstate : LOCKSTATE \\
+		unitstate : UNITLOCKSTATE \\
+		powermode : POWERMODE \\
+		status: PUMPSTATUS\\
+		paramset:PARAMSSTATE
+	\where
+		\# \ran lines \leq 3\\
+		\# \ran lines = \# \dom lines\\
+		\dom lines = activeids\\
+	\end{schema}
+	
+	At the beginning pump has no lines plugged in and powered of.
+	Unit and lines state is unlock. Alarm is not sound. 
+	Pump has three inputs.	
+	
+	\begin{schema}{InitPump}
+		Pump
+		\where
+		%вопрос line
+		%line : \power Line \\
+		%вопрос line
+		%lines : \nat \pfun Line \\
+		activeids = \emptyset \\
+		lines = \emptyset \\
+		alarmstate = off \\
+		linelockstate = unlocked \\
+		unitstate  = unlocked \\
+		powermode =  no\_power \\
+		status = pump\_off\\
+		param\_set=not\_set	
+	\end{schema}
+	
+	\begin{schema}{SETPARAM}
+		FUCK MODELS
+	\end{schema}
+
+    \begin{schema}{LINELOCKEORUNLOCK}
+		FUCK MODELS
+	\end{schema} 
+	When we adding a new line, the id parameter identifies number of 
+	one of the three input inside of the infusion pump.
+
+	\begin{schema}{LineHookUp}
+		\Delta Pump \\
+		id? : ID \\
+		line? : Line \\
+		\where
+		id? \notin activeids\\
+		\# lines \leq 2 \\
+		linelockstate = lines\_unlocked \\
+		status' = status \\
+		alarmstate' = alarmstate \\
+		linelockstate' = linelockstate \\
+		powermode' =  powermode \\
+		unitstate' = unitstate \\
+		lines' = lines \cup \{id? \mapsto line?\} \\
+		activeids' = activeids \cup id?
+	\end{schema}
+
+	When we removing a line from the pump, it should have unlock state
+	and also have id parameter which identifies number of one of the
+	three input of the infusion pump.
+	
+	\begin{schema}{LineHookOut}
+		\Delta Pump \\
+		id? : ID \\
+		line? : Line
+		\where
+		\# lines \geq 1 \\
+		linelockstate = lines_unlocked \\
+		status' = status \\
+		alarmstate' = alarmstate \\
+		linelockstate' = linelockstate \\
+		powermode' =  powermode \\
+		unitstate' = unitstate \\
+		lines' = lines \setminus \{id? \mapsto line?\} \\
+		activeids' = activeids \setminus id?
+	\end{schema}
+	
+	To start working with the pump we removing a line from the pump, it should have unlock state
+	and also have id parameter which identifies number of one of the
+	three input of the infusion pump.	
+	
+	\begin{schema}{PlugIn}
+		\Delta Pump\\
+		status?:PUMPSTATUS
+		\where
+		status? = plug\_in \\
+		status = plug\_out \\
+		status' = status? \\
+		alarmstate' = alarmstate \\
+		linelockstate' = linelockstate \\
+		powermode' =  electricity \\
+		unitstate' = unitstate \\
+	\end{schema}
+	
+	//Does this action covers the case when we lost electricity?
+	
+	\begin{schema}{PlugOut}
+		\Delta Pump\\
+		status?:PUMPSTATUS
+		\where
+		status? = plug\_out \\
+		status = plug\_in \\
+		status' = status? \\
+		alarmstate' = alarmstate \\
+		linelockstate' = linelockstate \\
+		powermode' =  battery \\
+		unitstate' = unitstate \\
+	\end{schema}
+	
+	// Can pump be pugged out and powermode is battery?	
+	
+	\begin{schema}{SwitchToBattery}
+		\Delta Pump\\
+		mode?:POWERMODE
+		\where 
+		mode? = battery \\
+		mode = elictricity \\
+		status = plug\_in \\
+		powermode' = mode? \\
+		status' = status \\
+		alarmstate' = alarmstate \\
+		linelockstate' = linelockstate \\
+		unitstate' = unitstate \\
+	\end{schema}
+	
+	\begin{schema}{Promote}
+		\Delta Pump\\
+		\Delta Line\\
+		lid?:ID
+		\where 
+		lid? \in activeids\\
+		(lines (lid?)) = \theta Line\\
+		lines' = lines \oplus \{lid? \mapsto \theta Line'\}
+	\end{schema}
+	
+	%Power On Self Test
+	\begin{schema}{TurnOn}
+		\Delta Pump \\
+		status?:PUMPSTATUS
+		\where 
+		status? = post\_error  \\
+		status? = plug\_on \\
+		status' = status?
+	\end{schema}
+			
+	\begin{schema}{SystemCheck}
+		\Delta Pump\\
+		status?:PUMPSTATUS
+		\where 
+		status? = system\_check\_error \lor system\_check\_pass \\
+		status? \neq status\\
+		status' = status?
+	\end{schema}
+	
+	\begin{schema}{FluidCheck}
+ line?: Line\\
+ status!: LINESTATUS\\
+ \where 
+ line.fluid = 0\\
+ status! = run\_out\_medicine\\
+ \end{schema}	
+		
+
+\end{document}

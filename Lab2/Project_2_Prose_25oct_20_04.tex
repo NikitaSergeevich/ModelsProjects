@@ -1,0 +1,119 @@
+\documentclass{article}
+\usepackage{times}
+\usepackage{fullpage}
+
+\newcommand{\head}{\subsection*}
+\setlength{\parindent}{0pt}
+
+\begin{document}
+
+%_______________________________________________________________________________
+% Heading section
+%_______________________________________________________________________________
+\begin{center}
+\rule{\textwidth}{1.5pt} \\ \rule[10pt]{\textwidth}{1pt}\\
+MSIT-SE-M-01\hfill Models of Software Systems\\[3ex]
+{\Large\bf Project 2: Z Modeling}\\[3ex]
+Innopolis University \hfill {\bf Due: October 28, 2015} \rule{\textwidth}{1pt}
+\\\rule[9.5pt]{\textwidth}{1.5pt}
+\end{center}
+
+The purpose of this project is to give you experience in modeling a
+realistic system as a Z specification. The example that we will use
+is the Infusion Pump. A general description of an Infusion Pump can
+be found in the General Project Documents folder on the class
+blackboard.
+
+\bigskip You should carry out this project in your assigned team.
+Make sure that everyone in the group contributes to the overall
+effort. Each team should submit a single write-up of the project,
+due at the beginning of class on the project due date. We have
+posted a template for a group project write-up under the
+\LaTeX~section of the course web site.
+
+%___________________________________________________________________________________________________
+\head{Task 1 (90 points):}
+%___________________________________________________________________________________________________
+
+From a certain level of abstraction, a machine with multiple,
+concurrent threads may be considered to be a machine with a single
+thread, particularly if we do not permit events to occur
+simultaneously. From this point of view, it is possible to treat an
+N-channel infusion pump as a sequential system where events may
+occur in any one channel, but at different times. Moreover, the
+specification of events' timing is a non-trivial task and we can
+abstract away when the events must occur.
+
+\bigskip Your first task is to develop a specification of a
+3-channel pump. Use the description of the model from the Blackboard
+site to define the requirements for the pump. Your model should show
+how the pump operates  in the presence of failures and, also,
+consider the behavior in the presence or absence of electric power.
+As a hint, consider separating the model of a channel from the model
+of a pump that houses 3-channels. You should use promotion (just as
+in the Library Problem) to extend a model of a channel to the model
+of the pump.
+
+\bigskip Be sure to document your specification with appropriate explanatory prose
+
+\bigskip Effective use of the schema calculus will be one of the evaluation criteria for your specification.
+
+\bigskip Be sure to typecheck your specification using fuzz,
+Z-Eves, or CZT.
+
+\bigskip Answer the following questions in your project write-up:
+\begin{enumerate}
+    \item Describe any decisions that your team made in resolving
+    ambiguities in the English description. Also describe
+    alternatives you considered and rejected.
+    \\
+    \textbf{Answer NIKITA HELP}\\
+    1. Battery status.\\
+    2. Liquid and Fluid. Difference between them.\\
+    3. Power status, how it correlates with battery mode.\\
+ 
+    \item Would your model be more complicated if there were more
+    channels?
+    \\
+    \textbf{Answer}\\
+    We should only modify the enumeration $ID$ by adding new channels.
+    \item What happens when the pump is out of liquid?
+    \\
+    \textbf{Answer}\\
+    We had a scheme $FluidCheck$ which would throw error in case pump is out of liquid. Our specification controls the level of liquid by controling level of fluid of each lines. After this another action ... happens. And alarm...
+    \item Is it possible to dispense medicine without first
+    setting a rate?
+    \\
+    \textbf{Answer:,,,,,,}\\
+    Nikita will do it.
+    \item Is it possible to start the pump when the key is locked?
+    \\
+    \textbf{Answer: YES}\\
+    We can lock or unlock the line by special operation $Linelockorunlock$.. What is line lock and unit lock? What is key? 
+    \item What happens when the the pump is out of power?
+    \\
+    \textbf{Answer:ARTUR}\\
+    Pump would go the state PUMPSTATUS $pump\_off$ and the $POWERSTATUS$ would stay in previous condition...Describe in details when battery empty?? 
+    \item Are there any extensions in your model not defined in
+    the written description of the pump?
+    \\
+    \textbf{Answer:}\\
+    Wait for the answer what is description? *Battery
+\end{enumerate}
+
+\noindent The full specification should be attached to your project
+write-up. Hand in a hard copy and email a soft copy to the course
+teaching assistants before class on the due date.
+
+%___________________________________________________________________________________________________
+\head{Task 2 (10 Points):}
+%___________________________________________________________________________________________________
+
+For the second part of your project you should write a short essay
+(less than 1 page) that speculates on a more-complete Z model of the infusion pump. In particular, consider how you might use the Z schema calculus to introduce start- and end-times and duration into your model.
+Additionally, reflect on the experience of developing a model in a
+group; concentrate on how the formal model helped or hindered you in
+understanding the infusion pump.
+
+
+\end{document}
