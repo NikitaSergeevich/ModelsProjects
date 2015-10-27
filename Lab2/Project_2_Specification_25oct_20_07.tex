@@ -4,15 +4,28 @@
 
 \begin{document}
 	
-	\begin{zed}		
+	There are several state variables that will describe state of the pump:\\
+	\\
+	
+	ALARMSTATE: Is alarm activated, silenced or turned off\\
+	PARAMSSTATE: Are parameters set or not set\\
+	UNITLOCKSTATE: Is unit locked or unlocked \\
+	LINESLOCKSTATE: Is line locked, unlocked, hooked up or hooked out\\
+	PUMPSTATUS: Current status of the pump (pump or not pump)\\
+	ERRORSTATUS: Status of the possible pump error during the lifetime\\
+	LINESTATUS: Status of the line events
+	POWERMODE: Possible states of the power
+	
+	\begin{zed}	
+		
+		
 		ALARMSTATE ::= activated | silenced | alarm\_off \\
 		
 		PARAMSSTATE ::= set | not\_set \\
-		
+	
 		UNITLOCKSTATE ::= unit\_locked | unit\_unlocked \\
-		
+	
 		LINESLOCKSTATE ::= lines\_locked | lines\_unlocked | line\_hooked\_up | line\_hooked\_out \\
-		
 		PUMPSTATUS ::= pump\_on | pump\_off \\		
 		
 		ERRORSTATUS ::= ok | end\_of\_treatment\_time | post\_error | system\_check\_error \\ | run\_out\_medicine | low\_battery | line\_issue \\
@@ -73,12 +86,12 @@
 	\begin{schema}{PumpOp}
 		\Delta Pump
 	\where
-    	activeids' = activeids \land
-    	lines' = lines \land \\
-    	alarmstate' = alarmstate \land 
-    	linelockstate' = linelockstate \land \\
-    	unitstate' = unitstate \land
-    	powermode' = powermode \land
+    	activeids' = activeids \\
+    	lines' = lines  \\
+    	alarmstate' = alarmstate \\
+    	linelockstate' = linelockstate  \\
+    	unitstate' = unitstate \\
+    	powermode' = powermode \\
     	status' = status \\
     \end{schema}
 	
@@ -88,7 +101,7 @@
 	\where
 		status = pump\_on \\ 
 		unitstate = unit\_unlocked \\
-		paramset' = paramst?
+		paramset' = paramset?
 	\end{schema}
 
     \begin{schema}{LineLockUnlock}
@@ -114,10 +127,10 @@
 
 	\begin{schema}{LineHookUp}
 		\Delta Pump \\
-		id? : ID \\
+		id1? : ID \\
 		line? : Line \\
 	\where
-		id? \notin activeids \\
+		id1? \notin activeids \\
 		\# lines \leq 2 \\
 		linelockstate = lines\_unlocked \\
 		status' = status \\
@@ -125,8 +138,8 @@
 		linelockstate' = linelockstate \\
 		powermode' =  powermode \\
 		unitstate' = unitstate \\
-		lines' = lines \cup \{id? \mapsto line?\} \\
-		activeids' = activeids \cup id?
+		lines' = lines \cup \{id1? \mapsto line?\} \\
+		activeids' = activeids \cup id1?
 	\end{schema}
 
 	When we removing a line from the pump, it should have unlock state
@@ -135,10 +148,10 @@
 	
 	\begin{schema}{LineHookOut}
 		\Delta Pump \\
-		id? : ID \\
+		id1? : ID \\
 		line? : Line
 	\where
-		id? \in activeids \\
+		id1? \in activeids \\
 		\# lines \geq 1 \\
 		linelockstate = lines_unlocked \\
 		status' = status \\
@@ -146,14 +159,14 @@
 		linelockstate' = linelockstate \\
 		powermode' =  powermode \\
 		unitstate' = unitstate \\
-		lines' = lines \setminus \{id? \mapsto line?\} \\
-		activeids' = activeids \setminus id?
+		lines' = lines \setminus \{id1? \mapsto line?\} \\
+		activeids' = activeids \setminus id1?
 	\end{schema}
 	
 	\begin{schema}{RefillMedicine}
 		\Delta Pump \\
 		\Delta Line \\
-		id? : ID \\
+		id1? : ID \\
 		line? : Line
 	\where
 		\# lines \geq 1 \\
@@ -163,8 +176,8 @@
 		linelockstate' = linelockstate \\
 		powermode' =  powermode \\
 		unitstate' = unitstate \\
-		lines' = lines \setminus \{id? \mapsto line?\} \\
-		activeids' = activeids \setminus id?
+		lines' = lines \setminus \{id1? \mapsto line?\} \\
+		activeids' = activeids \setminus id1?
 	\end{schema}
 	
 	To start working with the pump we removing a line from the pump, it should have unlock state
@@ -239,12 +252,12 @@
 	\begin{schema}{PushFluidsPromote}
 		\Delta Pump	\\
 		\Delta Line \\
-		id? : ID \\
+		id1? : ID \\
 		status?: LINESTATUS
 	\where 
-		id? \in activeids \\
-		(lines id?) = \theta Line \\
-		lines' = lines \oplus \{id? -> \theta Line'\} \\		
+		id1? \in activeids \\
+		(lines id1?) = \theta Line \\
+		lines' = lines \oplus \{id1? -> \theta Line'\} \\		
 	\end{schema}
 	
 	//Add alarm here + runoutofmedicene
