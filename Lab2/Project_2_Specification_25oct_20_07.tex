@@ -5,14 +5,12 @@
 \begin{document}
 	
 	There are several state variables that will describe state of the pump:\\
-	\\
-	
 	ALARMSTATE: Is alarm activated, silenced or turned off\\
 	PARAMSSTATE: Are parameters set or not set\\
 	UNITLOCKSTATE: Is unit locked or unlocked \\
 	LINESLOCKSTATE: Is line locked, unlocked, hooked up or hooked out\\
 	PUMPSTATUS: Current status of the pump (pump or not pump)\\
-	ERRORSTATUS: Status of the possible pump error during the lifetime\\
+	PUMPERROR: Status of the possible pump error during the lifetime\\
 	LINESTATUS: Status of the line events
 	POWERMODE: Possible states of the power
 	
@@ -25,12 +23,13 @@
 	
 		UNITLOCKSTATE ::= unit\_locked | unit\_unlocked \\
 	
-		LINESLOCKSTATE ::= lines\_locked | lines\_unlocked | line\_hooked\_up | line\_hooked\_out \\
 		PUMPSTATUS ::= pump\_on | pump\_off \\		
 		
-		ERRORSTATUS ::= ok | end\_of\_treatment\_time | post\_error | system\_check\_error \\ | run\_out\_medicine | low\_battery | line\_issue \\
+		PUMPERROR ::= ok | end\_of\_treatment\_time | post\_error | system\_check\_error \\ | run\_out\_medicine | low\_battery | line\_issue \\
 		
-		LINESTATUS ::= ok | med\_ended | pinched | plugged \\
+		LINEERROR ::= ok | med\_ended | pinched | plugged \\
+		
+		LINESTATUS :: = line\_locked | line\_unlocked | line\_hooked\_out \\
 		
 		POWERMODE ::= electricity | battery | low\_battery | empty\_battery \\
 	\end{zed}
@@ -39,7 +38,8 @@
 	
 	\begin{schema}{Line}
 		fluid: \nat \\
-		line\_status: LINESTATUS	
+		line\_status: LINESTATUS \\
+		line\_error: LINEERROR 
 	\end{schema}
 	
 	\begin{zed}
@@ -47,16 +47,15 @@
 	\end{zed}
 		
 	\begin{schema}{Pump}
-		activeids : \power ID\\
+		activeids : \power ID \\
 		lines : ID \pfun Line \\
 		alarmstate : ALARMSTATE \\
 		linelockstate : LOCKSTATE \\
 		unitstate : UNITLOCKSTATE \\
 		powermode : POWERMODE \\
-		status: PUMPSTATUS\\
+		status: PUMPSTATUS \\
 		paramset:PARAMSSTATE
 	\where
-		\# \ran lines \leq 3\\
 		\# \ran lines = \# \dom lines\\
 		\dom lines = activeids\\
 	\end{schema}
@@ -68,10 +67,6 @@
 	\begin{schema}{InitPump}
 		Pump
 		\where
-		%вопрос line
-		%line : \power Line \\
-		%вопрос line
-		%lines : \nat \pfun Line \\
 		activeids = \emptyset \\
 		lines = \emptyset \\
 		alarmstate = off \\
@@ -80,6 +75,14 @@
 		powermode =  no\_power \\
 		status = pump\_off\\
 		param\_set=not\_set	
+	\end{schema}
+	
+	\begin{schema}{InitLine}
+		Line
+		\where
+		fluid = 500 \\
+		line\_status = line\_hooked\_out \\
+		line\_error = ok \\
 	\end{schema}
 	
 	Dataframe
@@ -95,22 +98,29 @@
     	status' = status \\
     \end{schema}
 	
+	Level of abstraction set 
 	\begin{schema}{SetParam}
 		PumpOp \\
-		paramst? : PARAMSSTATE 
+		paramset? : PARAMSSTATE 
 	\where
 		status = pump\_on \\ 
 		unitstate = unit\_unlocked \\
 		paramset' = paramset?
 	\end{schema}
-
+	
     \begin{schema}{LineLockUnlock}
 		\Delta Pump \\
 		new\_linestate? : LINELOCKSTATE
 	\where
 		status = pump\_on \\ 
 		unitstate \neq new\_unitstate? \\
-		unitstate' = new\_unitstate? \\		
+		unitstate' = new\_unitstate? \\	
+		activeids' = activeids \\
+    	lines' = lines  \\
+    	alarmstate' = alarmstate \\
+    	linelockstate' = linelockstate  \\
+    	powermode' = powermode \\
+    	status' = status \\	
 	\end{schema}
 	
     \begin{schema}{UnitLockUnlock}
@@ -120,6 +130,12 @@
 		status = pump\_on \\ 
 		unitstate \neq new\_linestate? \\
 		unitstate' = new\_linestate? \\
+		activeids' = activeids \\
+    	lines' = lines  \\
+    	alarmstate' = alarmstate \\
+    	linelockstate' = linelockstate  \\
+    	powermode' = powermode \\
+    	status' = status \\
 	\end{schema} 	
 	
 	When we adding a new line, the id parameter identifies number of 
@@ -138,7 +154,7 @@
 		linelockstate' = linelockstate \\
 		powermode' =  powermode \\
 		unitstate' = unitstate \\
-		lines' = lines \cup \{id1? \mapsto line?\} \\
+		lines' = lines \cup \{id1? \mapsto Line?\} \\
 		activeids' = activeids \cup id1?
 	\end{schema}
 
@@ -148,18 +164,17 @@
 	
 	\begin{schema}{LineHookOut}
 		\Delta Pump \\
-		id1? : ID \\
-		line? : Line
+		id1? : ID
 	\where
 		id1? \in activeids \\
 		\# lines \geq 1 \\
-		linelockstate = lines_unlocked \\
+		linelockstate = lines\_unlocked \\
 		status' = status \\
 		alarmstate' = alarmstate \\
 		linelockstate' = linelockstate \\
 		powermode' =  powermode \\
 		unitstate' = unitstate \\
-		lines' = lines \setminus \{id1? \mapsto line?\} \\
+		lines' = lines \setminus \{id1? \mapsto lines(id1?)\} \\
 		activeids' = activeids \setminus id1?
 	\end{schema}
 	
@@ -261,7 +276,7 @@
 	\end{schema}
 	
 	//Add alarm here + runoutofmedicene
-	\begin{schema}{PushFluids}
+	\begin{schema}{DispenseFluids}
 		\Delta Line \\
 		amount?: \nat \\
 		status?: LINESTATUS
