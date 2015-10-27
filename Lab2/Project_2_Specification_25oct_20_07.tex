@@ -4,22 +4,18 @@
 
 \begin{document}
 	
-	\begin{zed}
-		
+	\begin{zed}		
 		ALARMSTATE ::= activated | silenced | alarm\_off \\
 		
 		PARAMSSTATE ::= set | not\_set \\
 		
 		UNITLOCKSTATE ::= unit\_locked | unit\_unlocked \\
 		
-		LINESLOCKSTATE ::= lines\_locked | lines\_unlocked \\
+		LINESLOCKSTATE ::= lines\_locked | lines\_unlocked | line\_hooked\_up | line\_hooked\_out \\
 		
-		PUMPSTATUS ::= pump\_on | pump\_off \\
+		PUMPSTATUS ::= pump\_on | pump\_off \\		
 		
-		
-		ERRORSTATUS ::= ok | end\_of\_treatment\_time | post\_error | system\_check\_error \\ | run\_out\_medicine | low\_battery | line_issue \\
-		
-		
+		ERRORSTATUS ::= ok | end\_of\_treatment\_time | post\_error | system\_check\_error \\ | run\_out\_medicine | low\_battery | line\_issue \\
 		
 		LINESTATUS ::= ok | med\_ended | pinched | plugged \\
 		
@@ -30,7 +26,7 @@
 	
 	\begin{schema}{Line}
 		fluid: \nat \\
-		line_status: LINESTATUS	
+		line\_status: LINESTATUS	
 	\end{schema}
 	
 	\begin{zed}
@@ -96,7 +92,7 @@
 	\end{schema}
 
     \begin{schema}{LineLockUnlock}
-		\Delta Library \\
+		\Delta Pump \\
 		new\_linestate? : LINELOCKSTATE
 	\where
 		status = pump\_on \\ 
@@ -105,7 +101,7 @@
 	\end{schema}
 	
     \begin{schema}{UnitLockUnlock}
-		\Delta Library \\
+		\Delta Pump \\
 		new\_unitstate? : UNITLOCKSTATE
 	\where
 		status = pump\_on \\ 
@@ -121,7 +117,7 @@
 		id? : ID \\
 		line? : Line \\
 	\where
-		id? \notin activeids\\
+		id? \notin activeids \\
 		\# lines \leq 2 \\
 		linelockstate = lines\_unlocked \\
 		status' = status \\
@@ -139,6 +135,24 @@
 	
 	\begin{schema}{LineHookOut}
 		\Delta Pump \\
+		id? : ID \\
+		line? : Line
+	\where
+		id? \in activeids \\
+		\# lines \geq 1 \\
+		linelockstate = lines_unlocked \\
+		status' = status \\
+		alarmstate' = alarmstate \\
+		linelockstate' = linelockstate \\
+		powermode' =  powermode \\
+		unitstate' = unitstate \\
+		lines' = lines \setminus \{id? \mapsto line?\} \\
+		activeids' = activeids \setminus id?
+	\end{schema}
+	
+	\begin{schema}{RefillMedicine}
+		\Delta Pump \\
+		\Delta Line \\
 		id? : ID \\
 		line? : Line
 	\where
@@ -201,16 +215,6 @@
 		unitstate' = unitstate \\
 	\end{schema}
 	
-	\begin{schema}{Promote}
-		\Delta Pump\\
-		\Delta Line\\
-		lid?:ID
-	\where 
-		lid? \in activeids\\
-		(lines (lid?)) = \theta Line\\
-		lines' = lines \oplus \{lid? \mapsto \theta Line'\}
-	\end{schema}
-	
 	%Power On Self Test
 	\begin{schema}{TurnOn}
 		\Delta Pump \\
@@ -231,6 +235,7 @@
 	\end{schema}
 	
 	Pushing fluids through the particular pump line (add frame) alarm is a pump status, how to obtain it from
+	
 	\begin{schema}{PushFluidsPromote}
 		\Delta Pump	\\
 		\Delta Line \\
@@ -238,10 +243,11 @@
 		status?: LINESTATUS
 	\where 
 		id? \in activeids \\
-		(lines id?) = \theta line \\
-		lines' = lines \oplus {id? -> \theta line'} \\		
+		(lines id?) = \theta Line \\
+		lines' = lines \oplus \{id? -> \theta Line'\} \\		
 	\end{schema}
 	
+	//Add alarm here + runoutofmedicene
 	\begin{schema}{PushFluids}
 		\Delta Line \\
 		amount?: \nat \\
@@ -251,16 +257,5 @@
 		fluid' = fluid - amount? \\
 		line_status' = LINESTATUS
 	\end{schema}
-	
-	
-	It should be calculus.
-	\begin{schema}{FluidCheck}
-		amount?: \nat \\
-		status!: LINESTATUS \\
-	\where 
-		line.fluid = 0 \\
-		status! = run\_out\_medicine \\
-	\end{schema}	
-		
 
 \end{document}
