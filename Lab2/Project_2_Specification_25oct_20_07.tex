@@ -47,17 +47,14 @@
 	\end{zed}
 		
 	\begin{schema}{Pump}
-		activeids : \power ID \\
 		lines : ID \pfun Line \\
 		alarmstate : ALARMSTATE \\
-		linelockstate : LOCKSTATE \\
 		unitstate : UNITLOCKSTATE \\
 		powermode : POWERMODE \\
 		status: PUMPSTATUS \\
 		paramset:PARAMSSTATE
 	\where
 		\# \ran lines = \# \dom lines\\
-		\dom lines = activeids\\
 	\end{schema}
 	
 	At the beginning pump has no lines plugged in and powered of.
@@ -67,14 +64,12 @@
 	\begin{schema}{InitPump}
 		Pump
 		\where
-		activeids = \emptyset \\
 		lines = \emptyset \\
 		alarmstate = off \\
-		linelockstate = unlocked \\
 		unitstate  = unlocked \\
 		powermode =  no\_power \\
 		status = pump\_off\\
-		param\_set=not\_set	
+		param\_set = not\_set	
 	\end{schema}
 	
 	\begin{schema}{InitLine}
@@ -108,134 +103,98 @@
 		paramset' = paramset?
 	\end{schema}
 	
-    \begin{schema}{LineLockUnlock}
+    \begin{schema}{UnitLockUnlock}
 		\Delta Pump \\
-		new\_linestate? : LINELOCKSTATE
+		new\_unitstate? : LINELOCKSTATE
 	\where
 		status = pump\_on \\ 
 		unitstate \neq new\_unitstate? \\
-		unitstate' = new\_unitstate? \\	
-		activeids' = activeids \\
+		unitstate' = new\_unitstate? \\
     	lines' = lines  \\
     	alarmstate' = alarmstate \\
-    	linelockstate' = linelockstate  \\
     	powermode' = powermode \\
     	status' = status \\	
 	\end{schema}
 	
-    \begin{schema}{UnitLockUnlock}
-		\Delta Pump \\
-		new\_unitstate? : UNITLOCKSTATE
-	\where
-		status = pump\_on \\ 
-		unitstate \neq new\_linestate? \\
-		unitstate' = new\_linestate? \\
-		activeids' = activeids \\
-    	lines' = lines  \\
-    	alarmstate' = alarmstate \\
-    	linelockstate' = linelockstate  \\
-    	powermode' = powermode \\
-    	status' = status \\
-	\end{schema} 	
-	
 	When we adding a new line, the id parameter identifies number of 
-	one of the three input inside of the infusion pump.
-
-	\begin{schema}{LineHookUp}
+	one of the three input inside of the infusion pump.	
+	
+    \begin{schema}{LineLock}
 		\Delta Pump \\
 		id1? : ID \\
 		line? : Line \\
 	\where
-		id1? \notin activeids \\
-		\# lines \leq 2 \\
-		linelockstate = lines\_unlocked \\
-		status' = status \\
-		alarmstate' = alarmstate \\
-		linelockstate' = linelockstate \\
-		powermode' =  powermode \\
-		unitstate' = unitstate \\
-		lines' = lines \cup \{id1? \mapsto Line?\} \\
-		activeids' = activeids \cup id1?
-	\end{schema}
+	    pump shouldn't work? \\
+		id1? \notin \dom lines \\
+    	lines' = lines \cup \{id1? \mapsto line?\} \\
+    	alarmstate' = alarmstate \\
+    	unitstate' = unitstate \\
+    	powermode' = powermode \\
+    	status' = status \\
+    	paramset' = paramset
+	\end{schema} 	
 
+	
 	When we removing a line from the pump, it should have unlock state
 	and also have id parameter which identifies number of one of the
 	three input of the infusion pump.
-	
-	\begin{schema}{LineHookOut}
+
+	\begin{schema}{LineUnlock}
 		\Delta Pump \\
-		id1? : ID
-	\where
-		id1? \in activeids \\
-		\# lines \geq 1 \\
-		linelockstate = lines\_unlocked \\
-		status' = status \\
-		alarmstate' = alarmstate \\
-		linelockstate' = linelockstate \\
-		powermode' =  powermode \\
-		unitstate' = unitstate \\
-		lines' = lines \setminus \{id1? \mapsto lines(id1?)\} \\
-		activeids' = activeids \setminus id1?
-	\end{schema}
-	
-	\begin{schema}{RefillMedicine}
-		\Delta Pump \\
-		\Delta Line \\
 		id1? : ID \\
-		line? : Line
 	\where
-		\# lines \geq 1 \\
-		linelockstate = lines_unlocked \\
-		status' = status \\
-		alarmstate' = alarmstate \\
-		linelockstate' = linelockstate \\
-		powermode' =  powermode \\
-		unitstate' = unitstate \\
-		lines' = lines \setminus \{id1? \mapsto line?\} \\
-		activeids' = activeids \setminus id1?
+		pump shouldn't work? \\
+		id1? \in \dom lines \\
+		lines' = lines \setminus \{id1? \mapsto lines(id1?)\} \\
+    	alarmstate' = alarmstate \\
+    	unitstate' = unitstate \\
+    	powermode' = powermode \\
+    	status' = status \\
+    	paramset' = paramset
+	\end{schema}
+
+	
+	\begin{schema}{RefillLineMedicine}
+		\Delta Line \\
+		amount?: \nat \\
+	\where
+	    fluid + amount? \leqslant 500 \\
+	    fluid' = fluid + amount?	
 	\end{schema}
 	
 	To start working with the pump we removing a line from the pump, it should have unlock state
 	and also have id parameter which identifies number of one of the
 	three input of the infusion pump.	
-	
+	Covers when we lost electricity
 	\begin{schema}{PlugIn}
 		\Delta Pump\\
-		status?:PUMPSTATUS
+		status? : PUMPSTATUS
 	\where
-		status? = plug\_in \\
-		status = plug\_out \\
+		status \neq status? \\
 		status' = status? \\
 		alarmstate' = alarmstate \\
-		linelockstate' = linelockstate \\
-		powermode' =  electricity \\
 		unitstate' = unitstate \\
+		status? = plug\_out \implies powermode' = battery \\
+		status? = plug\_in \implies powermode' = electricity \\
+		status' = status \\
+		paramset' = paramset		
 	\end{schema}
 	
-	//Does this action covers the case when we lost electricity?
-	
-	\begin{schema}{PlugOut}
-		\Delta Pump\\
-		status?:PUMPSTATUS
-	\where
-		status? = plug\_out \\
-		status = plug\_in \\
-		status' = status? \\
-		alarmstate' = alarmstate \\
-		linelockstate' = linelockstate \\
-		powermode' =  battery \\
-		unitstate' = unitstate \\
-	\end{schema}
-	
-	// Can pump be pugged out and powermode is battery?	
-	
-	\begin{schema}{SwitchToBattery}
-		\Delta Pump\\
-		mode?:POWERMODE
+	\begin{schema}{SwitchPowerMode}
+		\Delta Pump \\
+		mode? : POWERMODE
 	\where 
+		status = plug\_in \\
+		status' = status \\
+		alarmstate' = alarmstate \\
+		unitstate' = unitstate \\
+		status? = plug\_out \land mode? = electricity \implies powermode' = battery \\
+		status? = plug\_out \land mode? = battery \implies powermode' = battery \\
+		
+		status? = plug\_in \implies powermode' = mode? \\
 		mode? = battery \\
 		mode = elictricity \\
-		status = plug\_in \\
+		
 		powermode' = mode? \\
 		status' = status \\
 		alarmstate' = alarmstate \\
@@ -268,7 +227,6 @@
 		\Delta Pump	\\
 		\Delta Line \\
 		id1? : ID \\
-		status?: LINESTATUS
 	\where 
 		id1? \in activeids \\
 		(lines id1?) = \theta Line \\
