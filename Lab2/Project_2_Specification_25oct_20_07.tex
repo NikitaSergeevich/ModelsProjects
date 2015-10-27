@@ -6,7 +6,7 @@
 	
 	\begin{zed}
 		
-		ALARMSTATE ::= activated | silenced | alarm_off \\
+		ALARMSTATE ::= activated | silenced | alarm\_off \\
 		
 		PARAMSSTATE ::= set | not\_set \\
 		
@@ -17,7 +17,7 @@
 		PUMPSTATUS ::= pump\_on | pump\_off \\
 		
 		
-		ERRORSTATUS ::= ok | end\_of\_treatment\_time | post\_error | system\_check\_error \\ | run\_out\_medicine | low\_battery \\
+		ERRORSTATUS ::= ok | end\_of\_treatment\_time | post\_error | system\_check\_error \\ | run\_out\_medicine | low\_battery | line_issue \\
 		
 		
 		
@@ -30,7 +30,7 @@
 	
 	\begin{schema}{Line}
 		fluid: \nat \\
-		status: LINESTATUS	
+		line_status: LINESTATUS	
 	\end{schema}
 	
 	\begin{zed}
@@ -73,13 +73,46 @@
 		param\_set=not\_set	
 	\end{schema}
 	
-	\begin{schema}{SETPARAM}
-		FUCK MODELS
+	Dataframe
+	\begin{schema}{PumpOp}
+		\Delta Pump
+	\where
+    	activeids' = activeids \land
+    	lines' = lines \land \\
+    	alarmstate' = alarmstate \land 
+    	linelockstate' = linelockstate \land \\
+    	unitstate' = unitstate \land
+    	powermode' = powermode \land
+    	status' = status \\
+    \end{schema}
+	
+	\begin{schema}{SetParam}
+		PumpOp \\
+		paramst? : PARAMSSTATE 
+	\where
+		status = pump\_on \\ 
+		unitstate = unit\_unlocked \\
+		paramset' = paramst?
 	\end{schema}
 
-    \begin{schema}{LINELOCKEORUNLOCK}
-		FUCK MODELS
-	\end{schema} 
+    \begin{schema}{LineLockUnlock}
+		\Delta Library \\
+		new\_linestate? : LINELOCKSTATE
+	\where
+		status = pump\_on \\ 
+		unitstate \neq new\_unitstate? \\
+		unitstate' = new\_unitstate? \\		
+	\end{schema}
+	
+    \begin{schema}{UnitLockUnlock}
+		\Delta Library \\
+		new\_unitstate? : UNITLOCKSTATE
+	\where
+		status = pump\_on \\ 
+		unitstate \neq new\_linestate? \\
+		unitstate' = new\_linestate? \\
+	\end{schema} 	
+	
 	When we adding a new line, the id parameter identifies number of 
 	one of the three input inside of the infusion pump.
 
@@ -87,7 +120,7 @@
 		\Delta Pump \\
 		id? : ID \\
 		line? : Line \\
-		\where
+	\where
 		id? \notin activeids\\
 		\# lines \leq 2 \\
 		linelockstate = lines\_unlocked \\
@@ -108,7 +141,7 @@
 		\Delta Pump \\
 		id? : ID \\
 		line? : Line
-		\where
+	\where
 		\# lines \geq 1 \\
 		linelockstate = lines_unlocked \\
 		status' = status \\
@@ -127,7 +160,7 @@
 	\begin{schema}{PlugIn}
 		\Delta Pump\\
 		status?:PUMPSTATUS
-		\where
+	\where
 		status? = plug\_in \\
 		status = plug\_out \\
 		status' = status? \\
@@ -142,7 +175,7 @@
 	\begin{schema}{PlugOut}
 		\Delta Pump\\
 		status?:PUMPSTATUS
-		\where
+	\where
 		status? = plug\_out \\
 		status = plug\_in \\
 		status' = status? \\
@@ -157,7 +190,7 @@
 	\begin{schema}{SwitchToBattery}
 		\Delta Pump\\
 		mode?:POWERMODE
-		\where 
+	\where 
 		mode? = battery \\
 		mode = elictricity \\
 		status = plug\_in \\
@@ -172,7 +205,7 @@
 		\Delta Pump\\
 		\Delta Line\\
 		lid?:ID
-		\where 
+	\where 
 		lid? \in activeids\\
 		(lines (lid?)) = \theta Line\\
 		lines' = lines \oplus \{lid? \mapsto \theta Line'\}
@@ -182,7 +215,7 @@
 	\begin{schema}{TurnOn}
 		\Delta Pump \\
 		status?:PUMPSTATUS
-		\where 
+	\where 
 		status? = post\_error  \\
 		status? = plug\_on \\
 		status' = status?
@@ -191,19 +224,43 @@
 	\begin{schema}{SystemCheck}
 		\Delta Pump\\
 		status?:PUMPSTATUS
-		\where 
+	\where 
 		status? = system\_check\_error \lor system\_check\_pass \\
 		status? \neq status\\
 		status' = status?
 	\end{schema}
 	
+	Pushing fluids through the particular pump line (add frame) alarm is a pump status, how to obtain it from
+	\begin{schema}{PushFluidsPromote}
+		\Delta Pump	\\
+		\Delta Line \\
+		id? : ID \\
+		status?: LINESTATUS
+	\where 
+		id? \in activeids \\
+		(lines id?) = \theta line \\
+		lines' = lines \oplus {id? -> \theta line'} \\		
+	\end{schema}
+	
+	\begin{schema}{PushFluids}
+		\Delta Line \\
+		amount?: \nat \\
+		status?: LINESTATUS
+	\where 
+		fluid > what? \\
+		fluid' = fluid - amount? \\
+		line_status' = LINESTATUS
+	\end{schema}
+	
+	
+	It should be calculus.
 	\begin{schema}{FluidCheck}
- line?: Line\\
- status!: LINESTATUS\\
- \where 
- line.fluid = 0\\
- status! = run\_out\_medicine\\
- \end{schema}	
+		amount?: \nat \\
+		status!: LINESTATUS \\
+	\where 
+		line.fluid = 0 \\
+		status! = run\_out\_medicine \\
+	\end{schema}	
 		
 
 \end{document}
