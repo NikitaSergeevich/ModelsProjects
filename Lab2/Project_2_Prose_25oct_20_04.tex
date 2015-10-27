@@ -67,20 +67,29 @@ Z-Eves, or CZT.
     ambiguities in the English description. Also describe
     alternatives you considered and rejected.
     \\
-    \textbf{Answer NIKITA HELP}\\
-    1. Battery status.\\
-    2. Liquid and Fluid. Difference between them.\\
-    3. Power status, how it correlates with battery mode.\\
+    \textbf{Answer:}\\
+    
+   There is an ambiguity about the fact if a patient can modify the pump settings. For this, we make an assumption that patient can't make Unlock unit action because it is protected by some mechanism (only caregiver or doctor can use it).
+    
+    Pump specification has ambiguity of the pump behaviour in case of electricity problems. In our specification in case of electricity loss, pump will automatically switch to the battery.
+    
+    Silenced alarm is not zero volume but quite volume.
+    According to requirements from ”Generic Infusion Pump Hazard Analysis and Safety Requirements”, we include assumption that pump will work on low battery level less than 4 hours.
+    
+	There is no description how the power-on-self-test works, so we've added the checked options into the specification.
  
     \item Would your model be more complicated if there were more
     channels?
     \\
     \textbf{Answer}\\
-    We should only modify the enumeration $ID$ by adding new channels.
+    No. We should only modify enumeration $ID$ by adding new channel numbers and change several places where the cardinality of $lines$ set is used.
     \item What happens when the pump is out of liquid?
     \\
-    \textbf{Answer}\\
-    We had a scheme $FluidCheck$ which would throw error in case pump is out of liquid. Our specification controls the level of liquid by controling level of fluid of each lines. After this another action ... happens. And alarm...
+    \textbf{Assumption:}\\
+    If the pump is out of liquid it means that some (or one) of pump's lines are out of liquid.
+    \textbf{Answer:}\\
+    In this case alarm will be set on if the $dispense\_fluids$ action will be made for the particular line 
+    
     \item Is it possible to dispense medicine without first
     setting a rate?
     \\
