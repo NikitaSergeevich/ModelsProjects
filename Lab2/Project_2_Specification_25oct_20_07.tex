@@ -19,17 +19,19 @@
 		
 		ALARMSTATE ::= activated | silenced | alarm\_off \\
 		
-		PARAMSSTATE ::= set | not\_set \\
+		[PARAMSSTATE] \\ %Assumption: powerset of all settings
 	
 		UNITLOCKSTATE ::= unit\_locked | unit\_unlocked \\
 	
-		PUMPSTATUS ::= pump\_on | pump\_off \\		
+		PUMPSTATUS ::= pump\_on | pump\_off | pump\_active \\
+		
+		PUMPPLUG ::=  plug\_in | plug\_off
 		
 		PUMPERROR ::= ok | end\_of\_treatment\_time | post\_error | system\_check\_error \\ | run\_out\_medicine | low\_battery | line\_issue \\
 		
 		LINEERROR ::= ok | med\_ended | pinched | plugged \\
 		
-		LINESTATUS :: = line\_locked | line\_unlocked | line\_hooked\_out \\
+		LINESTATUS :: = line\_locked | line\_unlocked \\
 		
 		POWERMODE ::= electricity | battery | low\_battery | empty\_battery \\
 	\end{zed}
@@ -38,36 +40,45 @@
 	
 	\begin{schema}{Line}
 		fluid: \nat \\
+		rate: \nat \\
 		line\_status: LINESTATUS \\
-		line\_error: LINEERROR 
+		line\_error: LINEERROR
+	\where
+		fluid \leqslant 500 \\ 
+		rate \leqslant 25
 	\end{schema}
 	
 	\begin{zed}
 		ID::=1|2|3
 	\end{zed}
-		
+	Pump has only three inputs. We defined it by setting ennumeration ID by this way.	
 	\begin{schema}{Pump}
 		lines : ID \pfun Line \\
 		alarmstate : ALARMSTATE \\
 		unitstate : UNITLOCKSTATE \\
 		powermode : POWERMODE \\
+		pumpplug : PUMPPLUG \\
 		status: PUMPSTATUS \\
-		paramset:PARAMSSTATE
+		paramset: PARAMSSTATE
 	\where
-		\# \ran lines = \# \dom lines\\
+		\# \ran lines = \# \dom lines \\
+		pumpplug = plug\_off \implies powermode \neq electricity 
 	\end{schema}
 	
+	Assumption: when pump would became to the state plugoff, powermode would automatically became to the status $battery$.\\
+	
 	At the beginning pump has no lines plugged in and powered of.
-	Unit and lines state is unlock. Alarm is not sound. 
-	Pump has three inputs.	
+	Unit is unlocked. Alarm is not sound. 
+		
 	
 	\begin{schema}{InitPump}
 		Pump
 		\where
 		lines = \emptyset \\
 		alarmstate = off \\
-		unitstate  = unlocked \\
+		unitstate  = unit\_unlocked \\
 		powermode =  no\_power \\
+		pumpplug = plug\_off \\
 		status = pump\_off\\
 		param\_set = not\_set	
 	\end{schema}
@@ -76,7 +87,8 @@
 		Line
 		\where
 		fluid = 500 \\
-		line\_status = line\_hooked\_out \\
+		rate = 0 \\
+		line\_status = line\_unlocked\\
 		line\_error = ok \\
 	\end{schema}
 	
@@ -84,16 +96,16 @@
 	\begin{schema}{PumpOp}
 		\Delta Pump
 	\where
-    	activeids' = activeids \\
     	lines' = lines  \\
     	alarmstate' = alarmstate \\
-    	linelockstate' = linelockstate  \\
     	unitstate' = unitstate \\
     	powermode' = powermode \\
+    	pumpplug' = pumpplug
     	status' = status \\
     \end{schema}
 	
-	Level of abstraction set 
+	Level of abstraction set + Assumtion + Valid paramset?\\
+	ADD set of satisfaibale parmset!!!!!!!!!!!!!!!!!!!!!!!!!!
 	\begin{schema}{SetParam}
 		PumpOp \\
 		paramset? : PARAMSSTATE 
@@ -107,119 +119,177 @@
 		\Delta Pump \\
 		new\_unitstate? : LINELOCKSTATE
 	\where
-		status = pump\_on \\ 
+		status \neq pump\_off \\ 
 		unitstate \neq new\_unitstate? \\
 		unitstate' = new\_unitstate? \\
     	lines' = lines  \\
+    	paramset' = paramset\\
     	alarmstate' = alarmstate \\
     	powermode' = powermode \\
+    	pumpplug' = pumpplug \\
     	status' = status \\	
 	\end{schema}
+	Assumption: couldn't locck/unlock while off mode, because screen and buttons are inactive.
 	
-	When we adding a new line, the id parameter identifies number of 
-	one of the three input inside of the infusion pump.	
 	
-    \begin{schema}{LineLock}
+
+    \begin{schema}{AddLineLock}
 		\Delta Pump \\
+		\Delta Line \\
 		id1? : ID \\
 		line? : Line \\
 	\where
-	    pump shouldn't work? \\
+	    status \neq pump\_active \\
 		id1? \notin \dom lines \\
+		line?.line\_status = line\_unlocked \\
+		line?.line\_error = ok\\
     	lines' = lines \cup \{id1? \mapsto line?\} \\
     	alarmstate' = alarmstate \\
     	unitstate' = unitstate \\
     	powermode' = powermode \\
+    	pumpplug' = pumpplug \\
     	status' = status \\
     	paramset' = paramset
-	\end{schema} 	
-
+	\end{schema}
+	For adding new line pump shouldnot be in active status.\\
+    By this operation we add new line and automatically lock it. ARTUR check the dote after line?
 	
-	When we removing a line from the pump, it should have unlock state
-	and also have id parameter which identifies number of one of the
-	three input of the infusion pump.
 
 	\begin{schema}{LineUnlock}
 		\Delta Pump \\
 		id1? : ID \\
 	\where
-		pump shouldn't work? \\
+		 status \neq pump\_active \\
 		id1? \in \dom lines \\
 		lines' = lines \setminus \{id1? \mapsto lines(id1?)\} \\
     	alarmstate' = alarmstate \\
     	unitstate' = unitstate \\
     	powermode' = powermode \\
+    	pumpplug' = pumpplug \\
     	status' = status \\
     	paramset' = paramset
 	\end{schema}
+	To unlock(exclude) the line from pump, pump couldnot be in active mode.
 
-	
 	\begin{schema}{RefillLineMedicine}
 		\Delta Line \\
-		amount?: \nat \\
 	\where
-	    fluid + amount? \leqslant 500 \\
-	    fluid' = fluid + amount?	
+	    fluid' = 500 \\
+	    line\_status' = line\_status \\
+		line\_error' = line\_error \\
+		rate'=rate
 	\end{schema}
+	Assumption: We could refill pump medicine by setting new package, which would be full of medicine. As a result if we refill fluid would become 500.
 	
-	To start working with the pump we removing a line from the pump, it should have unlock state
-	and also have id parameter which identifies number of one of the
-	three input of the infusion pump.	
-	Covers when we lost electricity
-	\begin{schema}{PlugIn}
-		\Delta Pump\\
-		status? : PUMPSTATUS
+	
+	\begin{schema}{PlugOff}
+		\Delta Pump		
 	\where
-		status \neq status? \\
-		status' = status? \\
-		alarmstate' = alarmstate \\
-		unitstate' = unitstate \\
-		status? = plug\_out \implies powermode' = battery \\
-		status? = plug\_in \implies powermode' = electricity \\
+		pumpplug = plug\_in \\		
+		lines' = lines  \\
+    	alarmstate' = alarmstate \\
+    	unitstate' = unitstate \\
+    	powermode' = powermode \\
+    	pumpplug' = plug\_off \\
+    	status' = status \\		
+		paramset' = paramset		
+	\end{schema}
+	Powermode would automatically change according to invariant.
+	\begin{schema}{PlugIn}
+		\Delta Pump 
+	\where
+		pumpplug = plug\_off \\
+		lines' = lines  \\
+    	alarmstate' = alarmstate \\
+    	unitstate' = unitstate \\
+    	powermode' = powermode \\
+    	pumpplug' = plug\_in \\
+    	powermode' = electricity \\
 		status' = status \\
 		paramset' = paramset		
 	\end{schema}
-	
-	\begin{schema}{SwitchPowerMode}
+    Assumption: If pump before plugging in worked from battery, after plugging in it automatically would start work from electricity. However, you can switch to the battery later. CHECK????????????	
+	\begin{schema}{SwitchToBattery}
 		\Delta Pump \\
-		mode? : POWERMODE
 	\where 
-		status = plug\_in \\
+		status \neq pump\_off \\
+		powermode \neq battery\\
+		lines' = lines \\
+		alarmstate' = alarmstate \\
+		unitstate' = unitstate \\
+		powermode' = battery \\
+		status' = status \\
+		paramset' = paramset \\
+	\end{schema}
+	
+	\begin{schema}{SwitchToElectricity}
+		\Delta Pump \\
+	\where 
+		status \neq pump\_off \\
+		pumpplug = plug\_in \\
+		powermode \neq electricity \\
+		lines' = lines \\
 		status' = status \\
 		alarmstate' = alarmstate \\
 		unitstate' = unitstate \\
-		status? = plug\_out \land mode? = electricity \implies powermode' = battery \\
-		status? = plug\_out \land mode? = battery \implies powermode' = battery \\
-		
-		status? = plug\_in \implies powermode' = mode? \\
-		mode? = battery \\
-		mode = elictricity \\
-		
-		powermode' = mode? \\
-		status' = status \\
-		alarmstate' = alarmstate \\
-		linelockstate' = linelockstate \\
-		unitstate' = unitstate \\
+		powermode' = electricity \\
+		paramset' = paramset \\
 	\end{schema}
 	
-	%Power On Self Test
-	\begin{schema}{TurnOn}
+	Power mode can be switched to the electricity when pump plugged in to socket.
+
+	\begin{schema}{SetPumpOn}
 		\Delta Pump \\
-		status?:PUMPSTATUS
 	\where 
-		status? = post\_error  \\
-		status? = plug\_on \\
-		status' = status?
+		status \neq pump\_on \\
+		status' = pump\_on \\
+		lines' = lines \\
+    	alarmstate' = alarmstate \\
+    	unitstate' = unitstate \\
+    	powermode' = powermode \\
+		paramset' = paramset
 	\end{schema}
+	
+	This action can be used to switch pump from active state to enabled state (pump\_on) and from off state to enabled state (pump\_on).
+	
+	\begin{schema}{StartPump}
+		\Delta Pump
+	\where
+		status = pump\_on \\ 
+		status' = pump\_active \\
+		lines' = lines  \\
+    	alarmstate' = alarmstate \\
+    	unitstate' = unitstate \\
+    	powermode' = powermode \\
+		paramset' = paramset
+	\end{schema}
+	
+	This action can be used to switch pump from enabled state (pump\_on) to active state.
+	
+	\begin{schema}{StopPump}
+		\Delta Pump
+	\where
+		status = pump\_on \\ 
+		status' = pump\_off \\
+		lines' = lines  \\
+    	alarmstate' = alarmstate \\
+    	unitstate' = unitstate \\
+    	powermode' = powermode \\
+		paramset' = paramset
+	\end{schema}	
+			
+	This action can be used to switch pump from enabled state (pump\_on) to off state. Electrical failure is out of scope in that case, it was described 
+	in plug_out action. Assumption is battery cannot be empty.		
 			
 	\begin{schema}{SystemCheck}
 		\Delta Pump\\
-		status?:PUMPSTATUS
+		report!:PUMPERROR
 	\where 
 		status? = system\_check\_error \lor system\_check\_pass \\
 		status? \neq status\\
 		status' = status?
 	\end{schema}
+	
 	
 	Pushing fluids through the particular pump line (add frame) alarm is a pump status, how to obtain it from
 	
