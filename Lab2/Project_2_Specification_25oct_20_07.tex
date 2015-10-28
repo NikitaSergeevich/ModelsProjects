@@ -5,29 +5,28 @@
 \begin{document}
 	
 	There are several state variables that will describe state of the pump:\\
-	\\
 	
-	ALARMSTATE: Is alarm activated, silenced or turned off\\
-	PARAMSSTATE: Are parameters set or not set\\
-	UNITLOCKSTATE: Is unit locked or unlocked \\
-	LINESLOCKSTATE: Is line locked, unlocked, hooked up or hooked out\\
-	PUMPSTATUS: Current status of the pump (pump or not pump)\\
-	ERRORSTATUS: Status of the possible pump error during the lifetime\\
-	LINESTATUS: Status of the line events
-	POWERMODE: Possible states of the power
+	
+	$ALARMSTATE$: Is alarm activated, silenced or turned off\\
+	$PARAMSSTATE$: Primitive type describing all of the settings\\
+	$UNITLOCKSTATE$: Is unit locked or unlocked \\
+	$LINESLOCKSTATE$: Is line locked, unlocked, hooked up or hooked out\\
+	$PUMPSTATUS$: Current status of the pump\\
+	$ERRORSTATUS$: Status of the possible pump error during the lifetime\\
+	$LINESTATUS$: Status of the line events\\
+	$POWERMODE$: Possible states of the power
 	
 	\begin{zed}	
-		
+		[PARAMSSTATE] \\ %Assumption: powerset of all settings
 		
 		ALARMSTATE ::= activated | silenced | alarm\_off \\
 		
-		[PARAMSSTATE] \\ %Assumption: powerset of all settings
 	
 		UNITLOCKSTATE ::= unit\_locked | unit\_unlocked \\
 	
 		PUMPSTATUS ::= pump\_on | pump\_off | pump\_active \\
 		
-		PUMPPLUG ::=  plug\_in | plug\_off
+		PUMPPLUG ::=  plug\_in | plug\_off\\
 		
 		ERRORSTATUS ::= ok | end\_of\_treatment\_time | post\_error | system\_check\_error \\ | run\_out\_medicine | low\_battery | line\_issue \\
 		
@@ -36,22 +35,30 @@
 		POWERMODE ::= electricity | battery | low\_battery | empty\_battery \\
 	\end{zed}
 	
-	//Problem - we can have only one state
 	
+	Line of system that consists of medicine bag and infusion line. It can be inserted into the pump. $fluid$ - volume of medicine in bag. $rate$ - speed with which pump makes infusion. Two others state variables show line's status according to their type.
+		\textbf{???????can we make this numbers bigger???Should we say that it is > 0??}\\
 	\begin{schema}{Line}
 		fluid: \nat \\
 		rate: \nat \\
 		line\_status: LINESTATUS \\
 		line\_error: LINEERROR
 	\where
+
+	
 		fluid \leqslant 500 \\ 
 		rate \leqslant 25
 	\end{schema}
 	
+	Enumeration that consists of lines ID inside of a pump. If will add more IDs, the pump will we able to work with more lines. In addition, there will be small changes in parts where $\# lines$ is used.
 	\begin{zed}
 		ID::=1|2|3
 	\end{zed}
-	Pump has only three inputs. We defined it by setting ennumeration ID by this way.	
+	
+	Pump has only three inputs. We defined it by setting enumeration ID that will be domain of $lines$ and the fact that $lines$ is a partial function with additional condition in invariant.\\
+		Assumption: when pump would became to the state plugoff, powermode would automatically become to the status $battery$. \textbf{?????what if it turned off???????}\\
+	
+	\textbf{?????errorstatus aren't set??????}
 	\begin{schema}{Pump}
 		lines : ID \pfun Line \\
 		alarmstate : ALARMSTATE \\
@@ -65,10 +72,9 @@
 		pumpplug = plug\_off \implies powermode \neq electricity 
 	\end{schema}
 	
-	Assumption: when pump would became to the state plugoff, powermode would automatically became to the status $battery$.\\
 	
-	At the beginning pump has no lines plugged in and powered of.
-	Unit is unlocked. Alarm is not sound. 
+	At the beginning pump has no lines plugged in and powered off. In addition, it is not connected to AC. Unit is unlocked. Alarm is not sound. 
+	\textbf{?????paramset doesn't contain notset??????}
 		
 	
 	\begin{schema}{InitPump}
@@ -83,6 +89,7 @@
 		param\_set = not\_set	
 	\end{schema}
 	
+	We assume that usually line has 500 ml medicine inside it.
 	\begin{schema}{InitLine}
 		Line
 		\where
@@ -92,7 +99,7 @@
 		line\_error = ok \\
 	\end{schema}
 
-	Dataframe
+	It is a frame for several operations that enumerates states that will not be changed in the operations.
 	\begin{schema}{PumpOp}
 		\Delta Pump
 	\where
@@ -105,12 +112,14 @@
     \end{schema}
 	
 
-	Level of abstraction set + Assumption + Valid paramset?\\
-	ADD set of satisfaibale parmset!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+	\textbf{Level of abstraction set + Assumption + Valid paramset?\\
+	ADD set of satisfaibale parmset!!!!!!!!!!!!!!!!!!!!!!!!!!}
+	
+	\textbf{Assumption:}  $paramset?$ is something like config file. If a pump operator (doctor) makes only one change, all other parameters are gotten automatically from previous config.\\
+	We decided to make level ob abstraction in set of pump's parameters quite high to concentrate on the things that happens in concrete lines. Therefore, such parameter as $rate$ lies in the $Line$ schema, not $Pump$.
 	\begin{schema}{SetParam}
 		PumpOp \\
-		paramst? : PARAMSSTATE 
+		paramset? : PARAMSSTATE 
 	\where
 		status = pump\_on \\ 
 		unitstate = unit\_unlocked \\
@@ -118,9 +127,11 @@
 	\end{schema}
 
 	
+		The operation locks/unlocks unit. When the unit (current dispensing settings) are locked, no one can change the setting until unlocking the unit. The operation is may be made only when the pump, because in other case screen and buttons are inactive.\\
+		\textbf{????why unit state = linelockstate?????}
     \begin{schema}{UnitLockUnlock}
 		\Delta Pump \\
-		new\_unitstate? : LINELOCKSTATE
+		new\_unitstate? : UNITLOCKSTATE
 	\where
 		status \neq pump\_off \\ 
 		unitstate \neq new\_unitstate? \\
@@ -132,10 +143,12 @@
     	pumpplug' = pumpplug \\
     	status' = status \\	
 	\end{schema}
-	Assumption: couldn't lock/unlock while off mode, because screen and buttons are inactive.
 
-	
 
+		For adding new line pump should not be in active status.\\
+		By this operation we add new line and automatically lock it. ARTUR check the dote after line?
+\textbf{????you can change one line whe the other two are working.?????}
+\textbf{????Why addlinelock name.?????}
     \begin{schema}{AddLineLock}
 		\Delta Pump \\
 		\Delta Line \\
@@ -155,10 +168,10 @@
     	paramset' = paramset
 
 	\end{schema}
-	For adding new line pump shouldnot be in active status.\\
-    By this operation we add new line and automatically lock it. ARTUR check the dote after line?
-	
 
+	
+To unlock(exclude) the line from pump, pump could not be in active mode.
+\textbf{????Maybe it would be better if there will be 2 diff. operations: unlock and exclude It's question of level of abstraction?????}
 	\begin{schema}{LineUnlock}
 		\Delta Pump \\
 		id1? : ID \\
@@ -173,7 +186,10 @@
     	status' = status \\
     	paramset' = paramset
 	\end{schema}
-	To unlock(exclude) the line from pump, pump couldnot be in active mode.
+	
+
+Assumption: We could refill pump medicine by setting new package, which would be full of medicine. As a result if we refill fluid would become 500.
+\textbf{????refill using $shprits$ and new op. change medicinepacket Isn't it LineUnlock and LineAddd - two complex operations?????}
 
 	\begin{schema}{RefillLineMedicine}
 		\Delta Line \\
@@ -183,9 +199,12 @@
 		line\_error' = line\_error \\
 		rate'=rate
 	\end{schema}
-	Assumption: We could refill pump medicine by setting new package, which would be full of medicine. As a result if we refill fluid would become 500.
 	
 	
+
+	Powermode would automatically change according to invariant.
+		\textbf{????Maybe we should go to battery mode every time??????And wich level of battery. inconsistency????}
+		
 	\begin{schema}{PlugOff}
 		\Delta Pump		
 	\where
@@ -198,7 +217,9 @@
     	status' = status \\		
 		paramset' = paramset		
 	\end{schema}
-	Powermode would automatically change according to invariant.
+	
+	 Assumption: We assume that PlugIn operation works only in case when electrisity in socket is working. If there are problems with electricity in socket and we plugged in the pump, the operation will be made right after the electricity will emerge. If pump before plugging in worked from battery, after plugging in it automatically would start to work from electricity. However, you can switch to the battery later. 
+		\textbf{????Maybe we should go to battery mode every time??????And wich level of battery????}
 	\begin{schema}{PlugIn}
 		\Delta Pump 
 	\where
@@ -206,13 +227,13 @@
 		lines' = lines  \\
     	alarmstate' = alarmstate \\
     	unitstate' = unitstate \\
-    	powermode' = powermode \\
     	pumpplug' = plug\_in \\
     	powermode' = electricity \\
 		status' = status \\
 		paramset' = paramset		
 	\end{schema}
-    Assumption: If pump before plugging in worked from battery, after plugging in it automatically would start work from electricity. However, you can switch to the battery later. CHECK????????????	
+   
+\textbf{???what's about low battery???}
 	\begin{schema}{SwitchToBattery}
 		\Delta Pump \\
 	\where 
@@ -225,6 +246,8 @@
 		status' = status \\
 		paramset' = paramset \\
 	\end{schema}
+	
+		Power mode can be switched to the electricity when pump plugged in to socket.
 	
 	\begin{schema}{SwitchToElectricity}
 		\Delta Pump \\
@@ -240,8 +263,8 @@
 		paramset' = paramset \\
 	\end{schema}
 	
-	Power mode can be switched to the electricity when pump plugged in to socket.
 
+\textbf{???next schemas are identiacal????}
 	\begin{schema}{SetPumpOn}
 		\Delta Pump \\
 	\where 
@@ -255,6 +278,7 @@
 	\end{schema}
 	
 	This action can be used to switch pump from active state to enabled state (pump\_on) and from off state to enabled state (pump\_on).
+	\textbf{???what???}
 	
 	\begin{schema}{StartPump}
 		\Delta Pump
@@ -283,7 +307,7 @@
 	\end{schema}	
 			
 	This action can be used to switch pump from enabled state (pump\_on) to off state. Electrical failure is out of scope in that case, it was described 
-	in plug_out action. Assumption is battery cannot be empty.		
+	in $plug\_out$ action. Assumption is battery cannot be empty.		
 			
 	\begin{schema}{SystemCheck}
 		\Delta Pump\\
@@ -313,9 +337,11 @@
 		amount?: \nat \\
 		status?: LINESTATUS
 	\where 
-		fluid > what? \\
+		fluid > amount? \\
 		fluid' = fluid - amount? \\
 		line_status' = LINESTATUS
 	\end{schema}
+	
+	\textbf{??AddFluidPromote?}
 
 \end{document}
