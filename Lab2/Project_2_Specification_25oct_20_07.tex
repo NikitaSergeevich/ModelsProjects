@@ -10,11 +10,11 @@
 	$ALARMSTATE$: Is alarm activated, silenced or turned off\\
 	$PARAMSSTATE$: Primitive type describing all of the settings\\
 	$UNITLOCKSTATE$: Is unit locked or unlocked \\
-	$LINESLOCKSTATE$: Is line locked, unlocked, hooked up or hooked out\\ \textbf{!!!!!!!Переделать!}
+
 	$PUMPSTATUS$: Current status of the pump\\
 	$ERRORSTATUS$: Status of the possible pump error during the lifetime\\
-	$LINESTATUS$: Status of the line events\\
-	$POWERMODE$: Possible states of the power \textbf{!!!!!!!Переделать, добавить battery level!}
+	$POWERMODE$: Possible states of the power
+	$BATTERYLEVEL$: Possible states of the battery 
 	
 	\begin{zed}	
 		[PARAMSSTATE] \\ %Assumption: powerset of all settings
@@ -30,9 +30,11 @@
 		
 		ERRORSTATUS ::= ok | end\_of\_treatment\_time | post\_error | system\_check\_error \\ | run\_out\_medicine | low\_battery | line\_issue \\
 		
-		LINESTATUS :: = line\_locked | line\_unlocked \\
 		
-		POWERMODE ::= electricity | battery | low\_battery | empty\_battery \\
+		POWERMODE ::= electricity | battery  \\
+		
+		BATTERYLEVEL ::= charged| low\_charged | empty\\
+	
 	\end{zed}
 	
 	
@@ -66,15 +68,17 @@
 		powermode : POWERMODE \\
 		pumpplug : PUMPPLUG \\
 		status: PUMPSTATUS \\
-		paramset: PARAMSSTATE
+		paramset: PARAMSSTATE \\
+		battery: BATTERYLEVEL\\
+		
 	\where
 		\# \ran lines = \# \dom lines \\
-		pumpplug = plug\_off \implies powermode \neq electricity 
+		pumpplug = plug\_off \implies powermode \neq battery 
 	\end{schema}
 	
 	
 	At the beginning pump has no lines plugged in and powered off. In addition, it is not connected to AC. Unit is unlocked. Alarm is not sound. 
-	\textbf{?????paramset doesn't contain notset - maybe validParamSet or just leave??????}
+	\textbf{?????what with paramset??????}
 		
 	
 	\begin{schema}{InitPump}
@@ -85,8 +89,7 @@
 		unitstate  = unit\_unlocked \\
 		powermode =  no\_power \\
 		pumpplug = plug\_off \\
-		status = pump\_off\\
-		param\_set = not\_set	
+		status = pump\_off \\	
 	\end{schema}
 	
 	We assume that usually line has 500 ml medicine inside it.
@@ -95,7 +98,6 @@
 		\where
 		fluid = 500 \\
 		rate = 0 \\
-		line\_status = line\_unlocked\\
 		line\_error = ok \\
 	\end{schema}
 
@@ -112,11 +114,10 @@
     \end{schema}
 	
 
-	\textbf{Level of abstraction set + Assumption + Valid paramset?\\
-	ADD set of satisfaibale parmset!!!!!!!!!!!!!!!!!!!!!!!!!!}
+	\textbf{set of satisfaibale parmset!!!!!!!!!!!!!!!!!!!!!!!!!!}
 	
 	\textbf{Assumption:}  $paramset?$ is something like config file. If a pump operator (doctor) makes only one change, all other parameters are gotten automatically from previous config.\\
-	We decided to make level ob abstraction in set of pump's parameters quite high to concentrate on the things that happens in concrete lines. $PARAMSSTATE$ contains \textbf{right/wrong} Therefore, such parameter as $rate$ lies in the $Line$ schema, not $Pump$.
+	We decided to make level ob abstraction in set of pump's parameters quite high to concentrate on the things that happens in concrete lines. $PARAMSSTATE$ contains right (in terms of doses and other parameters) and wrong configurations. Therefore, such parameter as $rate$ lies in the $Line$ schema, not $Pump$.
 	\begin{schema}{SetParam}
 		PumpOp \\
 		paramset? : PARAMSSTATE 
@@ -144,10 +145,11 @@
 	\end{schema}
 
 
-		For adding new line pump should not be in active status.\\
-		By this operation we add new line and automatically lock it. ARTUR check the dote after line?
-\textbf{????you can change one line whe the other two are working - make an assumption.?????}
-\textbf{????Why addlinelock name - we lock line?????}
+		\textbf{Assumption:} For adding a new line, pump should not be in active status, it means that all single pumps inside the multiline pump should be paused.\\
+		By this operation we add new line and automatically lock it.
+
+\textbf{Assumption: } we chose such level of abstraction that we examine only the fact that the line is added to the pump. It means that it is brought on the right place and locked in its position.
+
     \begin{schema}{AddLine}
 		\Delta Pump \\
 		\Delta Line \\
@@ -157,7 +159,6 @@
 	    status \neq pump\_active \\
 		id1? \notin \dom lines \\
 		line? \notin \ran lines \\
-		line?.line\_status = line\_unlocked \\
 		line?.line\_error = ok\\
     	lines' = lines \cup \{id1? \mapsto line?\} \\
     	alarmstate' = alarmstate \\
@@ -166,7 +167,6 @@
     	pumpplug' = pumpplug \\
     	status' = status \\
     	paramset' = paramset
-
 	\end{schema}
 
 	
