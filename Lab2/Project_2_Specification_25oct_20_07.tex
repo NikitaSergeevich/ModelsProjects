@@ -16,7 +16,9 @@
 	$BATTERYLEVEL$: Possible states of the battery 
 	
 	\begin{zed}	
-		[PARAMSSTATE] \\ %Assumption: powerset of all settings
+		[PARAMSSTATE] 
+		
+		REPORT ::= success | pump\_is\_switched_off | same\_unit_state | pump\_is\_active | id\_is\_assigned | line\_is\_assigned | problem\_on\_line | line\_is\_not\_assigned | id\_is\_not\_assigned
 		
 		ALARMSTATE ::= activated | silenced | alarm\_off \\
 		
@@ -79,9 +81,17 @@
 	At the beginning pump has no lines plugged in and powered off. In addition, it is not connected to AC. Unit is unlocked. Alarm is not sound. 
 	\textbf{?????what with paramset??????}
 		
+			\begin{schema}{ValidParamSet}
+				Pump
+			CorrectParamSet: \power PARAMSET
+				
+			\end{schema}
+		
 	
 	\begin{schema}{InitPump}
-		Pump
+		Pump\\
+		ValidParamSet
+		
 		\where
 		lines = \emptyset \\
 		alarmstate = off \\
@@ -114,9 +124,8 @@
     \end{schema}
 	
 
-	\textbf{set of satisfaibale parmset!!!!!!!!!!!!!!!!!!!!!!!!!!}
-	
-	\textbf{Assumption:}  $paramset?$ is something like config file. If a pump operator (doctor) makes only one change, all other parameters are gotten automatically from previous config.\\
+
+	\textbf{Assumption:}  $paramset?$ is something like config file. If a pump operator (doctor) makes only one change, all other parameters are gotten automatically from previous config. We assume that given parameters are correct.\\
 	We decided to make level ob abstraction in set of pump's parameters quite high to concentrate on the things that happens in concrete lines. $PARAMSSTATE$ contains right (in terms of doses and other parameters) and wrong configurations. Therefore, such parameter as $rate$ lies in the $Line$ schema, not $Pump$.
 	\begin{schema}{SetParam}
 		PumpOp \\
@@ -282,11 +291,18 @@ If we would like to remove the medicine packet into another
 			
 	\begin{schema}{SystemCheck}
 		\Delta Pump\\
+		
 		report!:PUMPERROR
 	\where 
-		status? = system\_check\_error \lor system\_check\_pass \\
-		status? \neq status\\
-		status' = status?
+		status = pump_active\\
+		status' = system_check_error\\
+	alarmstate' = alarmstate \\
+	unitstate' = unitstate \\
+	powermode' = powermode \\
+	pumpplug' = pumpplug\\
+	batterylvl' = batterylvl\\
+	lines' = lines\\
+	paramset'=paramset\\
 	\end{schema}
 	
 	
