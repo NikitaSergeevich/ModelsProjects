@@ -16,9 +16,9 @@
 	$BATTERYLEVEL$: Possible states of the battery 
 	
 	\begin{zed}	
-		[PARAMSSTATE] 
+		[PARAMSSTATE] \\
 		
-		REPORT ::= success | pump\_is\_switched_off | same\_unit_state | pump\_is\_active | id\_is\_assigned | line\_is\_assigned | problem\_on\_line | line\_is\_not\_assigned | id\_is\_not\_assigned
+		REPORT ::= success | pump\_is\_switched_off | same\_unit_state | pump\_is\_active | \\id\_is\_assigned | line\_is\_assigned | problem\_on\_line |\\ line\_is\_not\_assigned | id\_is\_not\_assigned\\
 		
 		ALARMSTATE ::= activated | silenced | alarm\_off \\
 		
@@ -79,7 +79,9 @@
 	
 	
 	At the beginning pump has no lines plugged in and powered off. In addition, it is not connected to AC. Unit is unlocked. Alarm is not sound. 
-	\textbf{?????what with paramset??????}
+	
+	\textbf{Assumption:}\\
+	Valid param set contains correct configs.
 		
 			\begin{schema}{ValidParamSet}
 				Pump
@@ -90,8 +92,8 @@
 	
 	\begin{schema}{InitPump}
 		Pump\\
-		ValidParamSet
-		
+		ValidParamSet\\
+		paramset : ValidParamSet
 		\where
 		lines = \emptyset \\
 		alarmstate = off \\
@@ -296,7 +298,7 @@ If we would like to remove the medicine packet into another
 	\where 
 		status = pump_active\\
 		status' = system_check_error\\
-	alarmstate' = alarmstate \\
+	alarmstate' = alarm_on \\
 	unitstate' = unitstate \\
 	powermode' = powermode \\
 	pumpplug' = pumpplug\\
@@ -304,6 +306,22 @@ If we would like to remove the medicine packet into another
 	lines' = lines\\
 	paramset'=paramset\\
 	\end{schema}
+	
+		\begin{schema}{BatteryCheck}
+			\Delta Pump\\
+			
+			report!:PUMPERROR
+			\where 
+			batterylvl =empty\\
+			status' = low_battery\\
+			alarmstate' = alarm_on \\
+			unitstate' = unitstate \\
+			powermode' = powermode \\
+			pumpplug' = pumpplug\\
+			batterylvl' = batterylvl\\
+			lines' = lines\\
+			paramset'=paramset\\
+		\end{schema}
 	
 	
 	Pushing fluids through the particular pump line (add frame) alarm is a pump status, how to obtain it from
@@ -331,6 +349,90 @@ If we would like to remove the medicine packet into another
 \begin{zed}
 	PumpRefill == RefillLineMedicine \land Promote\\
 	PumpPushFluid == PushFluids \land Promote\\
+\end{zed}
+
+
+
+\begin{schema}{Success}
+	\Xi Pump \\
+	rprt!: REPORT
+	\where
+	rprt! = success \\
+\end{schema}
+
+\begin{schema}{UnitLockUnlockError}
+	\Xi Pump\\
+	new\_unitstate? : UNITLOCKSTATE
+	rprt!: REPORT
+	\where
+	status = pump\_off \implies rprt! = pump\_is\_switched\_off
+	new\_unitstate? = unitstate \implies rprt! = same\_unit\_state
+\end{schema}
+
+\begin{schema}{AddLineError}
+	\Xi Pump \\
+	\Xi Line \\
+	id1? : ID \\
+	line? : Line \\
+	rprt!: REPORT
+	\where
+	status = pump\_active \implies rprt! = pump\_is\_active \\
+	id1? \in \dom lines \implies rprt! = id\_is\_assigned \\
+	line? \in \ran lines \implies rprt! = line\_is\_assigned \\
+	line?.line\_error \neq ok \implies rprt! = problem\_on\_line \\
+\end{schema}
+
+\begin{schema}{RemoveLineError}
+	\Xi Pump \\
+	\Xi Line \\
+	id1? : ID \\
+	line? : Line \\
+	rprt!: REPORT
+	\where
+	status = pump\_active \implies rprt! = pump\_is\_active \\
+	id1? \nin \dom lines \implies rprt! = id\_is\_not\_assigned \\
+	line? \in \ran lines \implies rprt! = line\_is\_not\_assigned \\
+	line?.line\_error \neq ok \implies rprt! = line\_is\_deffect \\
+\end{schema}
+
+\begin{schema}{PlugInError}
+	\Xi Pump \\
+	rprt!: REPORT
+	\where
+	pumpplug \neq plug\_in \implies rprt! = pump\_is\_plugged\_off \\
+\end{schema}
+
+\begin{schema}{PlugOffError}
+	\Xi Pump \\
+	rprt!: REPORT
+	\where
+	pumpplug \neq plug\_off \implies rprt! = pump\_is\_plugged\_on \\
+\end{schema}
+
+\begin{schema}{SwitchToBatteryError}
+	\Xi Pump \\
+	rprt!: REPORT
+	\where
+	status = pump\_off \implies rprt! = pump\_is\_plugged\_off \\
+	powermode = battery \implies rprt! = already\_battery \\
+\end{schema}
+
+\begin{schema}{SwitchToElectricity}
+	\Xi Pump \\
+	rprt!: REPORT
+	\where
+	status = pump\_on \implies rprt! = pump\_is\_plugged\_on \\
+	powermode = electricity\\ \implies rprt! = already\_electricity \\
+\end{schema}
+
+\begin{zed}
+	RUnitLockUnlock == (UnitLockUnlock \land Success) \lor UnitLockUnlockError \\
+	RAddLine == (AddLine \land Success) \lor AddLineError \\
+	RemoveLine == (RemoveLine \land Success) \lor RemoveLineError \\
+	RPlugIn == (PlugIn \land Success) \lor PlugInError \\
+	RPlugOff == (PlugOff \land Success) \lor PlugOffError \\
+	RSwitchToBattery = (SwitchToBattery \land Success) \lor SwitchToBatteryError \\
+	RSwitchToElectricity = (SwitchToElectricity \land Success) \lor SwitchToElectricityError \\
 \end{zed}
 
 
