@@ -1,0 +1,439 @@
+\documentclass{article}
+\usepackage{zed-csp}
+%\input{handout}
+
+\begin{document}
+	
+	There are several state variables that will describe state of the pump:\\
+	
+	
+	$ALARMSTATE$: Is alarm activated, silenced or turned off\\
+	$PARAMSSTATE$: Primitive type describing all of the settings\\
+	$UNITLOCKSTATE$: Is unit locked or unlocked \\
+	$PUMPSTATUS$: Current status of the pump\\
+	$ERRORSTATUS$: Status of the possible pump error during the lifetime\\
+	$POWERMODE$: Possible states of the power
+	$BATTERYLEVEL$: Possible states of the battery 
+	
+	\begin{zed}	
+		[PARAMSSTATE] \\
+		
+		REPORT ::= success | pump\_is\_switched_off | same\_unit_state | pump\_is\_active | \\id\_is\_assigned | line\_is\_assigned | problem\_on\_line |\\ line\_is\_not\_assigned | id\_is\_not\_assigned\\
+		
+		ALARMSTATE ::= activated | silenced | alarm\_off \\
+		
+	
+		UNITLOCKSTATE ::= unit\_locked | unit\_unlocked \\
+	
+		PUMPSTATUS ::= pump\_idle | pump\_off | pump\_active \\
+		
+		PUMPPLUG ::=  plug\_in | plug\_off\\
+		
+		ERRORSTATUS ::= ok |  post\_error | system\_check\_error \\ |  low\_battery | line\_issue \\
+		
+		LINEERROR ::= ok | med\_ended | pinched | plugged \\
+		
+		POWERMODE ::= electricity | battery  \\
+		
+		BATTERYLEVEL ::= charged| low\_charged | empty\\
+	
+	\end{zed}
+	
+	
+	Line of system that consists of medicine bag and infusion line. It can be inserted into the pump. $fluid$ - volume of medicine in bag. $rate$ - speed with which pump makes infusion. Two others state variables show line's status according to their type.
+	
+	\begin{schema}{Line}
+		fluid: \nat \\
+		rate: \nat \\
+		line\_error: LINEERROR
+	\where
+
+	
+		fluid \leqslant 1000 \\ 
+		rate \leqslant 50
+	\end{schema}
+	
+	Enumeration that consists of lines ID inside of a pump. If will add more IDs, the pump will we able to work with more lines. In addition, there will be small changes in parts where $\# lines$ is used.
+	\begin{zed}
+		ID::=1|2|3
+	\end{zed}
+	
+	Pump has only three inputs. We defined it by setting enumeration ID that will be domain of $lines$ and the fact that $lines$ is a partial function with additional condition in invariant.\\
+		Assumption: when pump would became to the state plugoff, powermode would automatically become to the status $battery$, even if the pump is turned off. 
+	
+
+	\begin{schema}{Pump}
+		lines : ID \pfun Line \\
+		alarmstate : ALARMSTATE \\
+		unitstate : UNITLOCKSTATE \\
+		powermode : POWERMODE \\
+		pumpplug : PUMPPLUG \\
+		status: PUMPSTATUS \\
+		paramset: PARAMSSTATE \\
+		batterylvl: BATTERYLEVEL\\
+		
+	\where
+		\# \ran lines = \# \dom lines \\
+		pumpplug = plug\_off \implies powermode \neq battery 
+	\end{schema}
+	
+	
+	At the beginning pump has no lines plugged in and powered off. In addition, it is not connected to AC. Unit is unlocked. Alarm is not sound. 
+	
+	\textbf{Assumption:}\\
+	Valid param set contains correct configs.
+		
+			\begin{schema}{ValidParamSet}
+				Pump
+			CorrectParamSet: \power PARAMSET
+				
+			\end{schema}
+		
+	
+	\begin{schema}{InitPump}
+		Pump\\
+		ValidParamSet\\
+		paramset : ValidParamSet
+		\where
+		lines = \emptyset \\
+		alarmstate = off \\
+		unitstate  = unit\_unlocked \\
+		powermode =  no\_power \\
+		pumpplug = plug\_off \\
+		status = pump\_off \\	
+		batterylvl = charged\\
+	\end{schema}
+	
+	We assume that usually line has 500 ml medicine inside it.
+	\begin{schema}{InitLine}
+		Line
+		\where
+		fluid = 500 \\
+		rate = 0 \\
+		line\_error = ok \\
+	\end{schema}
+
+	It is a frame for several operations that enumerates states that will not be changed in the operations.
+	\begin{schema}{PumpOp}
+		\Delta Pump
+	\where
+    	alarmstate' = alarmstate \\
+    	unitstate' = unitstate \\
+    	powermode' = powermode \\
+    	pumpplug' = pumpplug\\
+    	status' = status \\
+    	batterylvl' = batterylvl
+    \end{schema}
+	
+
+
+	\textbf{Assumption:}  $paramset?$ is something like config file. If a pump operator (doctor) makes only one change, all other parameters are gotten automatically from previous config. We assume that given parameters are correct.\\
+	We decided to make level ob abstraction in set of pump's parameters quite high to concentrate on the things that happens in concrete lines. $PARAMSSTATE$ contains right (in terms of doses and other parameters) and wrong configurations. Therefore, such parameter as $rate$ lies in the $Line$ schema, not $Pump$.
+	\begin{schema}{SetParam}
+		PumpOp \\
+		paramset? : PARAMSSTATE 
+	\where
+	    lines' = lines  \\
+		status = pump\_idle \\ 
+		unitstate = unit\_unlocked \\
+		paramset' = paramset?
+	\end{schema}
+
+	
+		The operation locks/unlocks unit. When the unit (current dispensing settings) are locked, no one can change the setting until unlocking the unit. The operation is may be made only when the pump, because in other case screen and buttons are inactive.\\
+    \begin{schema}{UnitLockUnlock}
+		\Delta Pump \\
+		new\_unitstate? : UNITLOCKSTATE
+	\where
+		status \neq pump\_off \\ 
+		unitstate \neq new\_unitstate? \\
+		unitstate' = new\_unitstate? \\
+    	lines' = lines  \\
+    	paramset' = paramset\\
+    	alarmstate' = alarmstate \\
+    	powermode' = powermode \\
+    	pumpplug' = pumpplug \\
+    	status' = status \\	
+    	batterylvl' = batterylvl\\
+	\end{schema}
+
+
+		\textbf{Assumption:} For adding a new line, pump should not be in active status, it means that all single pumps inside the multiline pump should be paused.\\
+		By this operation we add new line and automatically lock it.
+
+We chose such level of abstraction that we examine only the fact that the line is added to the pump. It means that it is brought on the right place and locked in its position.
+
+    \begin{schema}{AddLine}
+    	PumpOp\\
+		\Xi Line \\
+		id1? : ID \\
+		line? : Line \\
+	\where
+	    status \neq pump\_active \\
+		id1? \notin \dom lines \\
+		line? \notin \ran lines \\
+		line?.line\_error = ok\\
+    	lines' = lines \cup \{id1? \mapsto line?\} \\
+    	status' = status \\
+    	paramset' = paramset\\
+	\end{schema}
+
+	
+\textbf{Assumption:} To exclude the line from pump, pump could not be in active mode, it should be set to idle to some amount of time. We do not pass the $line$ as an argument because we will remove any line from the named slot ($id1$)
+
+	\begin{schema}{RemoveLine}
+		PumpOp \\
+		id1? : ID \\
+	\where
+		status \neq pump\_active \\
+		id1? \in \dom lines \\
+		lines' = lines \setminus \{id1? \mapsto lines(id1?)\} \\
+    	paramset' = paramset\\ 	
+	\end{schema}
+	
+
+\textbf{Assumption}: We could refill pump medicine using a syringe with medicine. Result of the refillment should not be more than 1000 ml according to $Line$ invariant.
+If we would like to remove the medicine packet into another 
+
+	\begin{schema}{RefillLineMedicine}
+		\Delta Line \\
+		refillment? : \nat
+	\where
+	    fluid' = fluid + refillment? \\
+		line\_error' = line\_error \\
+		rate'=rate
+	\end{schema}
+	
+	
+
+\textbf{Assumption:} We chose such level of abstraction that if the electricity fails it will mean the same if the pump was $plugged\_off$. It means that operations $plug\_off$ is the same as $switch\_to\_battery$, so we haven't added last one into specification. The same is for pair $plug\_in$ and $switch\_to\_electricity$
+
+		
+	\begin{schema}{PlugOff}
+		\Delta Pump		
+	\where
+		pumpplug = plug\_in \\		
+		lines' = lines  \\
+    	alarmstate' = alarmstate \\
+    	unitstate' = unitstate \\
+    	powermode' = battery \\
+    	pumpplug' = plug\_off \\
+    	status' = status \\		
+		paramset' = paramset\\
+		batterylvl' = batterylvl		
+	\end{schema}
+	
+	 \textbf{Assumption}: We assume that PlugIn operation works only in case when electrisity in socket is working. If there are problems with electricity in socket and we plugged in the pump, the operation will be made right after the electricity will emerge. If pump before plugging in worked from battery, after plugging in it automatically would start to work from electricity. However, you can switch to the battery later. 
+	
+	\begin{schema}{PlugIn}
+		\Delta Pump 
+	\where
+		pumpplug = plug\_off \\
+		lines' = lines  \\
+    	alarmstate' = alarmstate \\
+    	unitstate' = unitstate \\
+    	pumpplug' = plug\_in \\
+    	powermode' = electricity \\
+		status' = status \\
+		paramset' = paramset\\
+		batterylvl' = batterylvl	
+	\end{schema}
+   
+
+
+	This action can be used to switch pump from active state to enabled state (pump\_idle) and from off state to enabled state (pump\_idle).
+	\begin{schema}{SetPumpIdle}
+		\Delta Pump \\
+	\where 
+		status \neq pump\_idle \\
+		status' = pump\_idle \\
+		lines' = lines \\
+    	alarmstate' = alarmstate \\
+    	unitstate' = unitstate \\
+    	powermode' = powermode \\
+		paramset' = paramset\\
+		batterylvl' = batterylvl
+	\end{schema}
+	
+
+	
+	
+			This action can be used to switch pump from enabled state (pump\_idle) to off state. Electrical failure is out of scope in that case, it was described in $plug\_out$ action. 	
+			
+	\begin{schema}{StartPump}
+		\Delta Pump
+	\where
+		\exists l: \ran lines @ l.rate > 0
+		status = pump\_idle \\ 
+		status' = pump\_active \\
+		lines' = lines  \\
+    	alarmstate' = alarmstate \\
+    	unitstate' = unitstate \\
+    	powermode' = powermode \\
+		paramset' = paramset\\
+		batterylvl' = batterylvl
+	\end{schema}
+	
+
+		
+	\begin{schema}{StopPump}
+		\Delta Pump
+	\where
+		status = pump\_idle \\ 
+		status' = pump\_off \\
+		lines' = lines  \\
+    	alarmstate' = alarmstate \\
+    	unitstate' = unitstate \\
+    	powermode' = powermode \\
+		paramset' = paramset\\
+		batterylvl' = batterylvl
+	\end{schema}	
+			
+	
+			
+	\begin{schema}{SystemCheck}
+		\Delta Pump\\
+		
+		report!:PUMPERROR
+	\where 
+		status = pump_active\\
+		status' = system_check_error\\
+	alarmstate' = alarm_on \\
+	unitstate' = unitstate \\
+	powermode' = powermode \\
+	pumpplug' = pumpplug\\
+	batterylvl' = batterylvl\\
+	lines' = lines\\
+	paramset'=paramset\\
+	\end{schema}
+	
+		\begin{schema}{BatteryCheck}
+			\Delta Pump\\
+			
+			report!:PUMPERROR
+			\where 
+			batterylvl =empty\\
+			status' = low_battery\\
+			alarmstate' = alarm_on \\
+			unitstate' = unitstate \\
+			powermode' = powermode \\
+			pumpplug' = pumpplug\\
+			batterylvl' = batterylvl\\
+			lines' = lines\\
+			paramset'=paramset\\
+		\end{schema}
+	
+	
+	Pushing fluids through the particular pump line (add frame) alarm is a pump status, how to obtain it from
+	
+	\begin{schema}{Promote}
+		\Delta Pump	\\
+		\Delta Line \\
+		id1? : ID \\
+	\where 
+		id1? \in activeids \\
+		(lines id1?) = \theta Line \\
+		lines' = lines \oplus \{id1? -> \theta Line'\} \\		
+	\end{schema}
+	
+	Rate is the volume of medicine that pump pushes through the line in one tact.
+	\begin{schema}{PushFluids}
+		\Delta Line \\
+		status?: LINESTATUS
+	\where 
+		fluid > rate? \\
+		fluid' = fluid - rate? \\
+		line_status' = LINESTATUS
+	\end{schema}
+
+\begin{zed}
+	PumpRefill == RefillLineMedicine \land Promote\\
+	PumpPushFluid == PushFluids \land Promote\\
+\end{zed}
+
+
+
+\begin{schema}{Success}
+	\Xi Pump \\
+	rprt!: REPORT
+	\where
+	rprt! = success \\
+\end{schema}
+
+\begin{schema}{UnitLockUnlockError}
+	\Xi Pump\\
+	new\_unitstate? : UNITLOCKSTATE
+	rprt!: REPORT
+	\where
+	status = pump\_off \implies rprt! = pump\_is\_switched\_off
+	new\_unitstate? = unitstate \implies rprt! = same\_unit\_state
+\end{schema}
+
+\begin{schema}{AddLineError}
+	\Xi Pump \\
+	\Xi Line \\
+	id1? : ID \\
+	line? : Line \\
+	rprt!: REPORT
+	\where
+	status = pump\_active \implies rprt! = pump\_is\_active \\
+	id1? \in \dom lines \implies rprt! = id\_is\_assigned \\
+	line? \in \ran lines \implies rprt! = line\_is\_assigned \\
+	line?.line\_error \neq ok \implies rprt! = problem\_on\_line \\
+\end{schema}
+
+\begin{schema}{RemoveLineError}
+	\Xi Pump \\
+	\Xi Line \\
+	id1? : ID \\
+	line? : Line \\
+	rprt!: REPORT
+	\where
+	status = pump\_active \implies rprt! = pump\_is\_active \\
+	id1? \nin \dom lines \implies rprt! = id\_is\_not\_assigned \\
+	line? \in \ran lines \implies rprt! = line\_is\_not\_assigned \\
+	line?.line\_error \neq ok \implies rprt! = line\_is\_deffect \\
+\end{schema}
+
+\begin{schema}{PlugInError}
+	\Xi Pump \\
+	rprt!: REPORT
+	\where
+	pumpplug \neq plug\_in \implies rprt! = pump\_is\_plugged\_off \\
+\end{schema}
+
+\begin{schema}{PlugOffError}
+	\Xi Pump \\
+	rprt!: REPORT
+	\where
+	pumpplug \neq plug\_off \implies rprt! = pump\_is\_plugged\_on \\
+\end{schema}
+
+\begin{schema}{SwitchToBatteryError}
+	\Xi Pump \\
+	rprt!: REPORT
+	\where
+	status = pump\_off \implies rprt! = pump\_is\_plugged\_off \\
+	powermode = battery \implies rprt! = already\_battery \\
+\end{schema}
+
+\begin{schema}{SwitchToElectricity}
+	\Xi Pump \\
+	rprt!: REPORT
+	\where
+	status = pump\_on \implies rprt! = pump\_is\_plugged\_on \\
+	powermode = electricity\\ \implies rprt! = already\_electricity \\
+\end{schema}
+
+\begin{zed}
+	RUnitLockUnlock == (UnitLockUnlock \land Success) \lor UnitLockUnlockError \\
+	RAddLine == (AddLine \land Success) \lor AddLineError \\
+	RemoveLine == (RemoveLine \land Success) \lor RemoveLineError \\
+	RPlugIn == (PlugIn \land Success) \lor PlugInError \\
+	RPlugOff == (PlugOff \land Success) \lor PlugOffError \\
+	RSwitchToBattery = (SwitchToBattery \land Success) \lor SwitchToBatteryError \\
+	RSwitchToElectricity = (SwitchToElectricity \land Success) \lor SwitchToElectricityError \\
+\end{zed}
+
+
+\end{document}
