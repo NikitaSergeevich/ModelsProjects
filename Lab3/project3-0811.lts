@@ -3,12 +3,18 @@ range RangeLine = 1..LineNum
 const MaxFluid = 10
 range Volume = 0..MaxFluid
 
+//Error Pump
 const Normal = 0
 const MedicineEnded = 1
 const SystemCheckError = 2
-//const Pinched = 2
-//const Plugged = 3
-range ErrorTypes = Normal..SystemCheckError
+const Pinched = 3
+const Plugged = 4
+range ErrorTypes = Normal..Plugged
+
+//Error Line
+//const Pinched = 1
+//const Plugged = 2
+//range ErrorLine = Normal..Plugged 
 
 const NotSet = 0
 const MaxRate = 2
@@ -69,11 +75,15 @@ when (p==Electricity) plugOff-> P[state][Battery][e]
 |when (e==Normal) medicineEnded -> P[state][p][MedicineEnded]
 |when (e==Normal) systemCheckError -> P[state][p][SystemCheckError] //maybe something with synchronization
 |when (e==MedicineEnded) alarm -> refill -> P[state][p][Normal]
+|when (e==Normal) pinched -> P[state][p][Pinched]
+|when (e==Normal) plugged -> P[state][p][Plugged]
+|when (e==Pinched) alarmPinched -> unpinched -> P[state][p][Normal]
+|when (e==Plugged) alarmPlugged -> unplugged -> P[state][p][Normal] 
 //OnOff
 |when (state==On) turnOff -> TURNEDOFF[p][e]
 
 // Blocking synchronisations
-|when (state==On) dispence -> P[state][p][e]
+|when (state==On) dispense -> P[state][p][e]
 |when (state==On) setRate -> P[state][p][e]
 )
 . 
@@ -86,6 +96,8 @@ L[f:Volume][r:Rate] = (
 refill -> L[MaxFluid][r]
 |when(f > r-1 && r > 0) dispense -> L[f-r][r]
 |when(f < r && r > 0) medicineEnded -> refill -> L[MaxFluid][r]
+|pinched -> unpinched -> L[f][r]
+|plugged -> unplugged -> L[f][r]
 |setRate[rNew:Rate] -> L[f][rNew] 
 ).
 
@@ -94,6 +106,10 @@ refill -> L[MaxFluid][r]
 {line[i].medicineEnded/medicineEnded,
 line[i].refill/refill,
 line[i].dispense/dispense,
+line[i].pinched/pinched,
+line[i].unpinched/unpinched,
+line[i].plugged/plugged,
+line[i].unplugged/unplugged,
 line[i].setRate[j:Rate]/setRate
 }}.
 
