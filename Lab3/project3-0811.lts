@@ -10,8 +10,8 @@ const SystemCheckError = 2
 //const Plugged = 3
 range ErrorTypes = Normal..SystemCheckError
 
-const MaxRate = 2
 const NotSet = 0
+const MaxRate = 2
 range Rate = NotSet..MaxRate
 
 
@@ -46,7 +46,7 @@ when (s == LowBattery) charge -> B[FullBattery]
 //EmptyBattery
 |when (s == EmptyBattery) charge -> B[LowBattery]
 |when (s == EmptyBattery) discharge -> B[EmptyBattery]
-|when (s == EmptyBattery) change_battery -> B[FullBattery]
+|when (s == EmptyBattery) changeBattery -> B[FullBattery]
 //FullBattery
 |when (s == FullBattery) charge -> B[FullBattery]
 |when (s == FullBattery) discharge -> B[LowBattery]
@@ -57,7 +57,10 @@ when (s == LowBattery) charge -> B[FullBattery]
 // !!!What is with cashe? mediceineEnded -> systemError and we don't know. 
 //Assumption - we can only have one error in "cache"
 
-PUMP = P[Off][Electricity][Normal],	//initial state
+PUMP = TURNEDOFF[Battery][Normal],  //initial state
+
+TURNEDOFF[p:PowerMode][e:ErrorTypes] = (turnOn -> P[On][p][e]),
+
 P[state:OnOff][p:PowerMode][e:ErrorTypes] = (
 // Change power mode
 when (p==Electricity) plugOff-> P[state][Battery][e]
@@ -67,21 +70,32 @@ when (p==Electricity) plugOff-> P[state][Battery][e]
 |when (e==Normal) systemCheckError -> P[state][p][SystemCheckError] //maybe something with synchronization
 |when (e==MedicineEnded) alarm -> refill -> P[state][p][Normal]
 //OnOff
-|when (state==On) turnOff -> P[Off][p][MedicineEnded]
-|when (state==Off) turnOn -> P[On][p][MedicineEnded]
+|when (state==On) turnOff -> TURNEDOFF[p][e]
+
+// Blocking synchronisations
+|when (state==On) dispence -> P[state][p][e]
+|when (state==On) setRate -> P[state][p][e]
 )
 . 
 
 
-//Assumption - refill is made only to max
-LINE = L[MaxFluid],
-L[f:Volume] = (
-refill -> L[MaxFluid]
-|when(f > 0) dispense -> L[f-1]
-|when(f == 0) dispense -> medicineEnded -> refill -> L[MaxFluid]
+//Assumption - if rate equals 3, we will not send only 2
+// Refill line1 after medicine ended kills ability to refill line 2
+LINE = L[MaxFluid][NotSet],
+L[f:Volume][r:Rate] = (
+refill -> L[MaxFluid][r]
+|when(f > r-1 && r > 0) dispense -> L[f-r][r]
+|when(f < r && r > 0) medicineEnded -> refill -> L[MaxFluid][r]
+|setRate[rNew:Rate] -> L[f][rNew] 
 ).
 
-||EVERYTHING = (PUMP || line[1..2]:LINE || BATTERY|| SAFE_DISPENCE).
+||EVERYTHING = (PUMP || line[1..2]:LINE || BATTERY|| SAFE_DISPENCE)
+/{forall[i:RangeLine]  
+{line[i].medicineEnded/medicineEnded,
+line[i].refill/refill,
+line[i].dispense/dispense,
+line[i].setRate[j:Rate]/setRate
+}}.
 
 // Safety property
 property SAFE_DISPENCE    
@@ -92,5 +106,4 @@ property SAFE_DISPENCE
 //=(line[i:RangeLine].medicineEnded->alarm -> line[i].refill  ->SAFE_DISPENCE).
 
 // Liveness property
-//assert FINITE = (dispense -> <>
-
+progress DISPENSE = {turnOn}
