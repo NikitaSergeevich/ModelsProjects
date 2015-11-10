@@ -1,19 +1,14 @@
 const LineNum = 2
 range RangeLine = 1..LineNum
 const MaxFluid = 10
-range FluidRange = 1..MaxFluid
+range Volume = 0..MaxFluid
 
 const Normal = 0
-const Error1 = 1
-const Error2 = 2
- 
-range ErrorTypes = Normal..Error2
-// 0-Pump has no errors
-// 1-Error 1
-// 2-Error 2
-// 3-Error 3
-// 4-Error 4
-// 5-Error 5
+const MedicineEnded = 1
+const SystemCheckError = 2
+//const Pinched = 2
+//const Plugged = 3
+range ErrorTypes = Normal..SystemCheckError
 
 //
 // States of power source
@@ -30,13 +25,13 @@ const LowBattery = 1 	// Pump uses battery with charge is enough for less than 4
 const EmptyBattery = 2 	// Battery is empty
 range BatteryMode = FullBattery .. EmptyBattery
 
-//ASSUMPTION if we will add new battery, it will momentarily goes from empty 
-Battery = B[FullBattery],
+
+BATTERY = B[FullBattery],
 B[s:BatteryMode]=
 (//LowBattery
 when (s == LowBattery) charge -> B[FullBattery]
 |when (s == LowBattery) discharge -> B[EmptyBattery]
-|when (s == LowBattery) change_battery -> B[FullBattery]
+|when (s == LowBattery) changeBattery -> B[FullBattery]
 //EmptyBattery
 |when (s == EmptyBattery) charge -> B[LowBattery]
 |when (s == EmptyBattery) discharge -> B[EmptyBattery]
@@ -44,20 +39,34 @@ when (s == LowBattery) charge -> B[FullBattery]
 //FullBattery
 |when (s == FullBattery) charge -> B[FullBattery]
 |when (s == FullBattery) discharge -> B[LowBattery]
-|when (s == FullBattery) change_battery -> B[FullBattery]
+|when (s == FullBattery) changeBattery -> B[FullBattery]
 ).
 
-//initial state
-PUMP = P[Electricity][Normal],
-//initial state
-
+// Add state power off/on
+// !!!What is with cashe? mediceineEnded -> systemError and we don't know. 
+//Assumption - we can only have one error in "cache"
+PUMP = P[Electricity][Normal],	//initial state
 P[p:PowerMode][e:ErrorTypes] = (
-changepowermode -> (
-when (p==Electricity) -> P[Battery][e]
-|
-when (p==Battery) -> P[Electricity][e]
-)). 
+// Change power mode
+when (p==Electricity) plugOff-> P[Battery][e]
+|when (p==Battery) plugIn-> P[Electricity][e]
+// Error ocurence
+|when (e==Normal) medicineEnded -> P[p][MedicineEnded]
+|when (e==Normal) systemCheckError -> P[p][SystemCheckError] //maybe something with synchronization
+|when (e==MedicineEnded) alarm -> refill -> P[p][Normal]
+)
+. 
 
+
+//Assumption - refill is made only to max
+LINE = L[MaxFluid],
+L[f:Volume] = (
+refill -> L[MaxFluid]
+|when(f > 0) dispense -> L[f-1]
+|when(f == 0) dispense -> medicineEnded -> refill -> L[MaxFluid]
+).
+
+||EVERYTHING = (PUMP || line[1..2]:LINE || BATTERY).
 
 //LINE = (set_rate -> enter_value -> connect_set -> purge_air -> lock_line -> PUSH_FLUIDS[A]),
 //PUSH_FLUIDS[v:FluidRange] = (when(v>0)dispense -> PUSH_FLUIDS[v-1]|when(v==0)alarm -> PUSH_FLUIDS[v]).
