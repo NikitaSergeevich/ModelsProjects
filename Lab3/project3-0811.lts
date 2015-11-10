@@ -1,5 +1,3 @@
-//Reflection - we do not see actual state of an object and see only the actions
-
 const LineNum = 2
 range RangeLine = 1..LineNum
 const MaxFluid = 10
@@ -11,9 +9,6 @@ const SystemCheckError = 2
 //const Pinched = 2
 //const Plugged = 3
 range ErrorTypes = Normal..SystemCheckError
-
-const NotSet = 0
-range Rate = NotSet..2
 
 //
 // States of power source
@@ -51,7 +46,6 @@ when (s == LowBattery) charge -> B[FullBattery]
 // !!!What is with cashe? mediceineEnded -> systemError and we don't know. 
 //Assumption - we can only have one error in "cache"
 PUMP = P[Electricity][Normal],	//initial state
-
 P[p:PowerMode][e:ErrorTypes] = (
 // Change power mode
 when (p==Electricity) plugOff-> P[Battery][e]
@@ -65,26 +59,14 @@ when (p==Electricity) plugOff-> P[Battery][e]
 
 
 //Assumption - refill is made only to max
-//Assumption - if rate equals 3, we will not send only 2
-// Refill line1 after medicine ended kills ability to refill line 2
-LINE = L[MaxFluid][NotSet],
-L[f:Volume][r:Rate] = (
-refill -> L[MaxFluid][r]
-|when(f > r-1 && r > 0) dispense -> L[f-r][r]
-|when(f < r && r > 0) medicineEnded -> refill -> L[MaxFluid][r]
-|setRate[rNew:Rate] -> L[f][rNew] 
+LINE = L[MaxFluid],
+L[f:Volume] = (
+refill -> L[MaxFluid]
+|when(f > 0) dispense -> L[f-1]
+|when(f == 0) dispense -> medicineEnded -> refill -> L[MaxFluid]
 ).
 
-||EVERYTHING = (PUMP || line[RangeLine]:LINE || BATTERY || SAFE_DISPENCE) 
-/{forall[i:RangeLine]  
-{line[i].medicineEnded/medicineEnded,
-line[i].refill/refill
-}
-}.
-
-property SAFE_DISPENCE
-     =(forall[i:RangeLine] {line[i].setRate->line[i].dispense -> SAFE_DISPENCE}).
-
+||EVERYTHING = (PUMP || line[1..2]:LINE || BATTERY).
 
 //LINE = (set_rate -> enter_value -> connect_set -> purge_air -> lock_line -> PUSH_FLUIDS[A]),
 //PUSH_FLUIDS[v:FluidRange] = (when(v>0)dispense -> PUSH_FLUIDS[v-1]|when(v==0)alarm -> PUSH_FLUIDS[v]).
