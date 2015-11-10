@@ -10,6 +10,17 @@ const SystemCheckError = 2
 //const Plugged = 3
 range ErrorTypes = Normal..SystemCheckError
 
+const MaxRate = 2
+const NotSet = 0
+range Rate = NotSet..MaxRate
+
+
+const Off = 0
+const On = 1
+range OnOff = Off..On
+
+
+
 //
 // States of power source
 // Assumption: 20% of battery is enough for 4 hours of working 
@@ -45,15 +56,19 @@ when (s == LowBattery) charge -> B[FullBattery]
 // Add state power off/on
 // !!!What is with cashe? mediceineEnded -> systemError and we don't know. 
 //Assumption - we can only have one error in "cache"
-PUMP = P[Electricity][Normal],	//initial state
-P[p:PowerMode][e:ErrorTypes] = (
+
+PUMP = P[Off][Electricity][Normal],	//initial state
+P[state:OnOff][p:PowerMode][e:ErrorTypes] = (
 // Change power mode
-when (p==Electricity) plugOff-> P[Battery][e]
-|when (p==Battery) plugIn-> P[Electricity][e]
+when (p==Electricity) plugOff-> P[state][Battery][e]
+|when (p==Battery) plugIn-> P[state][Electricity][e]
 // Error ocurence
-|when (e==Normal) medicineEnded -> P[p][MedicineEnded]
-|when (e==Normal) systemCheckError -> P[p][SystemCheckError] //maybe something with synchronization
-|when (e==MedicineEnded) alarm -> refill -> P[p][Normal]
+|when (e==Normal) medicineEnded -> P[state][p][MedicineEnded]
+|when (e==Normal) systemCheckError -> P[state][p][SystemCheckError] //maybe something with synchronization
+|when (e==MedicineEnded) alarm -> refill -> P[state][p][Normal]
+//OnOff
+|when (state==On) turnOff -> P[Off][p][MedicineEnded]
+|when (state==Off) turnOn -> P[On][p][MedicineEnded]
 )
 . 
 
@@ -66,12 +81,16 @@ refill -> L[MaxFluid]
 |when(f == 0) dispense -> medicineEnded -> refill -> L[MaxFluid]
 ).
 
-||EVERYTHING = (PUMP || line[1..2]:LINE || BATTERY).
+||EVERYTHING = (PUMP || line[1..2]:LINE || BATTERY|| SAFE_DISPENCE).
 
-//LINE = (set_rate -> enter_value -> connect_set -> purge_air -> lock_line -> PUSH_FLUIDS[A]),
-//PUSH_FLUIDS[v:FluidRange] = (when(v>0)dispense -> PUSH_FLUIDS[v-1]|when(v==0)alarm -> PUSH_FLUIDS[v]).
+// Safety property
+property SAFE_DISPENCE    
+=(line[i:RangeLine].medicineEnded->alarm ->SAFE_DISPENCE).
 
+// ASK TAs
+//=(line[i:RangeLine].setRate[1..MaxRate]->line[i].dispense -> SAFE_DISPENCE).
+//=(line[i:RangeLine].medicineEnded->alarm -> line[i].refill  ->SAFE_DISPENCE).
 
-
-//||PUMPWORK  = (line[RangeLine]:LINE).
+// Liveness property
+//assert FINITE = (dispense -> <>
 
