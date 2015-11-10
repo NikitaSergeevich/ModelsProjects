@@ -1,7 +1,7 @@
-//Reflection - we do not see actual state of an object and see only the actions
 
 const LineNum = 2
 range RangeLine = 1..LineNum
+
 const MaxFluid = 10
 range Volume = 0..MaxFluid
 
@@ -13,7 +13,8 @@ const SystemCheckError = 2
 range ErrorTypes = Normal..SystemCheckError
 
 const NotSet = 0
-range Rate = NotSet..2
+const MaxRate = 2
+range Rate = NotSet..MaxRate
 
 //
 // States of power source
@@ -47,19 +48,27 @@ when (s == LowBattery) charge -> B[FullBattery]
 |when (s == FullBattery) changeBattery -> B[FullBattery]
 ).
 
+
+
+
+const On = 0
+const Off = 1
+range OnOff = Off..On
 // Add state power off/on
 // !!!What is with cashe? mediceineEnded -> systemError and we don't know. 
 //Assumption - we can only have one error in "cache"
-PUMP = P[Electricity][Normal],	//initial state
-
-P[p:PowerMode][e:ErrorTypes] = (
+PUMP = P[Off][Electricity][Normal],	//initial state
+P[state:OnOff][p:PowerMode][e:ErrorTypes] = (
 // Change power mode
-when (p==Electricity) plugOff-> P[Battery][e]
-|when (p==Battery) plugIn-> P[Electricity][e]
+when (p==Electricity) plugOff-> P[state][Battery][e]
+|when (p==Battery) plugIn-> P[state][Electricity][e]
 // Error ocurence
-|when (e==Normal) medicineEnded -> P[p][MedicineEnded]
-|when (e==Normal) systemCheckError -> P[p][SystemCheckError] //maybe something with synchronization
-|when (e==MedicineEnded) alarm -> refill -> P[p][Normal]
+|when (e==Normal) medicineEnded -> P[state][p][MedicineEnded]
+|when (e==Normal) systemCheckError -> P[state][p][SystemCheckError] //maybe something with synchronization
+|when (e==MedicineEnded) alarm -> refill -> P[state][p][Normal]
+//OnOff
+|when (state==On) turnOff -> P[Off][p][MedicineEnded]
+|when (state==Off) turnOn -> P[On][p][MedicineEnded]
 )
 . 
 
@@ -75,21 +84,21 @@ refill -> L[MaxFluid][r]
 |setRate[rNew:Rate] -> L[f][rNew] 
 ).
 
-||EVERYTHING = (PUMP || line[RangeLine]:LINE || BATTERY || SAFE_DISPENCE) 
+||EVERYTHING = (PUMP || line[RangeLine]:LINE || BATTERY|| SAFE_DISPENCE) 
 /{forall[i:RangeLine]  
 {line[i].medicineEnded/medicineEnded,
 line[i].refill/refill
 }
 }.
 
-property SAFE_DISPENCE
-     =(forall[i:RangeLine] {line[i].setRate->line[i].dispense -> SAFE_DISPENCE}).
+// Safety property
+property SAFE_DISPENCE    
+	//=(line[i:RangeLine].setRate[1..MaxRate]->line[i].dispense -> SAFE_DISPENCE).
+//=(line[i:RangeLine].medicineEnded->alarm -> line[i].refill  ->SAFE_DISPENCE).
+=(line[i:RangeLine].medicineEnded->alarm ->SAFE_DISPENCE).
 
+// Liveness property
+//assert FINITE = (dispense -> <>
 
-//LINE = (set_rate -> enter_value -> connect_set -> purge_air -> lock_line -> PUSH_FLUIDS[A]),
-//PUSH_FLUIDS[v:FluidRange] = (when(v>0)dispense -> PUSH_FLUIDS[v-1]|when(v==0)alarm -> PUSH_FLUIDS[v]).
-
-
-
-//||PUMPWORK  = (line[RangeLine]:LINE).
+//=(line[i:RangeLine].medicineEnded->alarm ->SAFE_DISPENCE).
 
