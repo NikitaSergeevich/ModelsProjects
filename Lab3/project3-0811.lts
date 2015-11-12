@@ -1,31 +1,5 @@
 const LineNum = 2
 range RangeLine = 1..LineNum
-const MaxFluid = 10
-range Volume = 0..MaxFluid
-
-//Rate set
-const NotSet = 0
-const MaxRate = 2
-range Rate = NotSet..MaxRate
-
-//Pump on/off
-const Off = 0
-const On = 1
-range OnOff = Off..On
-
-//Number of errors which can occur in the line
-const NoErrors = 1
-const MaxErrors = 4
-range ErrorsLine = NoErrors..MaxErrors
-//
-// States of power source
-// Assumption: 20% of battery is enough for 4 hours of working 
-// (according to requirements from 
-// "Generic Infusion Pump Hazard Analysis and Safety Requirements")
-//
-const Electricity = 0 	// Pump uses AC power
-const Battery = 1 	// Battery mode
-range PowerMode = Electricity .. Battery
 
 const FullBattery = 0 	// Pump uses battery with charge is enough for more than 4 hours
 const LowBattery = 1 	// Pump uses battery with charge is enough for less than 4 hours
@@ -49,9 +23,22 @@ when (s == LowBattery) charge -> B[FullBattery]
 |when (s == FullBattery) changeBattery -> B[FullBattery]
 ).
 
-// Add state power off/on
-// !!!What is with cashe? mediceineEnded -> systemError and we don't know. 
-//Assumption - we can only have one error in "cache"
+
+//
+// States of power source
+// Assumption: 20% of battery is enough for 4 hours of working 
+// (according to requirements from 
+// "Generic Infusion Pump Hazard Analysis and Safety Requirements")
+//
+const Electricity = 0 	// Pump uses AC power
+const Battery = 1 	// Battery mode
+range PowerMode = Electricity .. Battery
+
+
+//Pump on/off
+const Off = 0
+const On = 1
+range OnOff = Off..On
 
 PUMP = TURNEDOFF[Battery],  //initial state
 
@@ -66,44 +53,64 @@ when (p==Electricity) plugOff-> P[Battery]
 )
 . 
 
+
+//Number of errors which can occur in the line
+const NoErrors = 1
+const MaxErrors = 4
+range ErrorsLine = NoErrors..MaxErrors
+
+
 ALARM = (turnOn -> SILENCEALARM),
 SILENCEALARM = (error -> LOUDALARM[1]
 |turnOff -> ALARM),
 LOUDALARM[e:ErrorsLine] = (
 when (e<MaxErrors) error -> LOUDALARM[e+1]
-|when (e>1) reduce -> LOUDALARM[e-1]
-|when (e==1) reduce -> SILENCEALARM
+|when (e>1) reduceError -> LOUDALARM[e-1]
+|when (e==1) reduceError -> SILENCEALARM
 |turnOff -> ALARM).
+
+
+const MaxFluid = 10
+range Volume = 0..MaxFluid
+
+//Rate set
+const LineOff = -1
+const NotSet = 0
+const MinRate = 1
+const MaxRate = 2
+range Rate = LineOff..MaxRate
 
 //Assumption - if rate equals 3, we will not send only 2
 //Assumption - if line has  2 problems(e.g. pinched and unplugged) then when pinched would be resolved Line firstly would go
 //to status LineOk and then to Unplugged.This process would flow automatically.
-//Assumption - if you could dispense 1 medicine and you change the mode to 2 medicine, medicine ended would happen and you will need to refill
+//Assumption - if you could dispense 1 medicine and you change the mode to 2 medicine (in other word, if rate is more than volume), medicine ended would happen and you will need to refill
 // Refill line1 after medicine ended kills ability to refill line 2
-LINE = L[MaxFluid][NotSet],
+LINE = L[MaxFluid][LineOff],
 L[f:Volume][r:Rate] = (
 refill -> L[MaxFluid][r]
-|when(f > r-1 && r > 0) dispense -> L[f-r][r]
-|when(f < r) medicineEnded -> refill -> L[MaxFluid][r] //поставить приоритет этого действия
-|refill2-> L[MaxFluid][r] //refill2 - because it should be different with refill, because refill is concurrent with reduce from LOUDALARM
-|pinched -> unpinched -> L[f][r]
-|turnOff -> L[f][NotSet]
-|setRate[rNew:Rate] -> L[f][rNew] 
+|when (r == -1) turnOn -> L[f][NotSet] 
+|when (f > r-1 && r > 0) dispense -> L[f-r][r]
+|when (f < r) medicineEnded -> refillAfterError -> L[MaxFluid][r] //поставить приоритет этого действия
+|refill-> L[MaxFluid][r] //refill2 - because it should be different with refill, because refill is concurrent with reduce from LOUDALARM
+|when (r > 0) pinched -> unpinched -> L[f][r]
+|when (r > -1) turnOff -> L[f][LineOff]
+|when (r > -1) stopLine -> L[f][LineOff] 
+|when (r > -1) setRate[rNew:MinRate..MaxRate] -> L[f][rNew] 
 ).
 
-||EVERYTHING = (PUMP || line[1..2]:LINE || line[1..2]:ALARM || BATTERY) //|| SAFE_DISPENSE)
+||EVERYTHING = (PUMP || line[1..2]:LINE || line[1..2]:ALARM || BATTERY || line[1..2]:SAFE_DISPENSE)
 /{forall[i:RangeLine]  
 {line[i].medicineEnded/line[i].error,
 turnOn/line[i].turnOn,
 turnOff/line[i].turnOff,
-line[i].refill/line[i].reduce,
+line[i].refillAfterError/line[i].reduceError,
 line[i].pinched/line[i].error,
-line[i].unpinched/line[i].reduce
+line[i].unpinched/line[i].reduceError
 }}.
 
 // Safety property
-//property SAFE_DISPENSE    
-//=(line[i:RangeLine].medicineEnded->alarm ->SAFE_DISPENSE).
+property SAFE_DISPENSE    
+=(medicineEnded->refillAfterError -> SAFE_DISPENSE).
 
 // ASK TAs
 //=(line[i:RangeLine].setRate[1..MaxRate]->line[i].dispense -> SAFE_DISPENCE).
