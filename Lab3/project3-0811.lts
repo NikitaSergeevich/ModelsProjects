@@ -98,7 +98,8 @@ refill -> L[MaxFluid][r]
 |when (r > -1) setRate[rNew:MinRate..MaxRate] -> L[f][rNew] 
 ).
 
-||EVERYTHING = (PUMP || line[1..2]:LINE || line[1..2]:ALARM || BATTERY || line[1..2]:SAFE_DISPENSE)
+||EVERYTHING = (PUMP || line[1..2]:LINE || line[1..2]:ALARM || BATTERY
+ || line[1..2]:SAFE_DISPENSE ||line[1..2]:Settings_Before_Dispense)
 /{forall[i:RangeLine]  
 {line[i].medicineEnded/line[i].error,
 turnOn/line[i].turnOn,
@@ -111,6 +112,10 @@ line[i].unpinched/line[i].reduceError
 // Safety property
 property SAFE_DISPENSE    
 =(medicineEnded->refillAfterError -> SAFE_DISPENSE).
+
+// ASK TAs
+property Settings_Before_Dispense    
+=(setRate[rNew:MinRate..MaxRate] -> (dispense -> Settings_Before_Dispense | setRate[r2New:MinRate..MaxRate] ->Settings_Before_Dispense )).
 
 // ASK TAs
 //=(line[i:RangeLine].setRate[1..MaxRate]->line[i].dispense -> SAFE_DISPENCE).
