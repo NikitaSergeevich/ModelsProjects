@@ -64,19 +64,51 @@ property. It would be particularly helpful if you include in your write-up the s
     It is a safety property, because it asserts that nothing bad happens during execution. In this case, that it is impossible to start the pump without confirming the settings. As it was said in our model description, modifying settings happens before the \verb|dispense| action. To check this we added property to LTSA scheme:\\
     \textbf{add here property}
     
-    \item Electrical power can fail at any time.
+    \item Electrical power can fail at any time.\\
     \textbf{Answer:}\\
-    It is a liveness property, because it describes that something bad will eventually happen. Our model can allows to check this property, to be more precise, we can show, that electrical filure (\verb|plugOff| action) can appear infinitely often:
+    It is a liveness property, because it describes that something bad will eventually happen. Our model allows to check this property, to be more precise, we can show, that electrical failure (\verb|plugOff| action) can appear infinitely often:
      \textbf{add here property}
       
     
     \item If the backup battery power fails, pumping will not occur on any line.
     \item It is always possible to resume pumping after a failure.
     \item An alarm will sound on any line failure (blockage, pinching, empty fluid, or
-whatever failures you model).
+whatever failures you model).\\
+    \textbf{Answer:}
+\\
+a) safety property for empty fluid - in this case, will be alarm\\
+b) during the LINE process\\
+c) we check this using "when" condition inside of LINE process (by comparing values of volume and rate)
+
+
     \item In the absence of errors the pump will continue to pump until the
 treatment is finished.
-    \item The system never deadlocks.
+\\
+    \textbf{Answer:}\\
+a) ? (using previous)\\
+b) (only for case with empty fluid)\\
+c) (similarly)
+    \item The system never deadlocks.\\
+    \textbf{Answer:}
+    \begin{verbatim}
+    Composition:
+EVERYTHING = PUMP || line.1:LINE || line.2:LINE || line.1:ALARM || line.2:ALARM || BATTERY || line.1:SAFE_DISPENSE || line.2:SAFE_DISPENSE
+State Space:
+ 4 * 102 * 102 * 6 * 6 * 3 * 2 * 2 = 2 ** 26
+Composing...
+Depth 37344 -- States: 10000 Transitions: 91019 Memory used: 69586K
+Depth 58240 -- States: 20000 Transitions: 174654 Memory used: 84214K
+Depth 64991 -- States: 30000 Transitions: 256613 Memory used: 98240K
+Depth 68622 -- States: 40000 Transitions: 339361 Memory used: 112318K
+Depth 58253 -- States: 50000 Transitions: 423537 Memory used: 88841K
+Depth 46493 -- States: 60000 Transitions: 506861 Memory used: 102857K
+Depth 34069 -- States: 70000 Transitions: 589260 Memory used: 116380K
+Depth 21875 -- States: 80000 Transitions: 674665 Memory used: 130385K
+Depth 9779 -- States: 90000 Transitions: 769373 Memory used: 106446K
+-- States: 97998 Transitions: 843738 Memory used: 152722K
+Composed in 974ms
+    \end{verbatim}
+    As we can see system is not in a deadlock anytime.
     \item Two other properties of your choosing.
 \end{enumerate}
 

@@ -11,12 +11,12 @@ BATTERY = B[FullBattery],
 B[s:BatteryMode]=
 (//LowBattery
 when (s == LowBattery) charge -> B[FullBattery]
-|when (s == LowBattery) discharge -> B[EmptyBattery]
+|when (s == LowBattery) discharge -> turnOffBattery -> B[EmptyBattery]
 |when (s == LowBattery) changeBattery -> B[FullBattery]
 //EmptyBattery
 |when (s == EmptyBattery) charge -> B[LowBattery]
-|when (s == EmptyBattery) discharge -> B[EmptyBattery]
 |when (s == EmptyBattery) changeBattery -> B[FullBattery]
+|when (s == EmptyBattery) turnOffBattery -> B[EmptyBattery]
 //FullBattery
 |when (s == FullBattery) charge -> B[FullBattery]
 |when (s == FullBattery) discharge -> B[LowBattery]
@@ -48,8 +48,9 @@ P[p:PowerMode] = (
 // Change power mode
 when (p==Electricity) plugOff-> P[Battery]
 |when (p==Battery) plugIn-> P[Electricity]
-//OnOff
-|turnOff -> TURNEDOFF[p]
+//OnOff. Different actions in order to make share actions
+|when (p==Battery) turnOffBattery -> TURNEDOFF[p]
+|when (p==Electricity) turnOffElectricity -> TURNEDOFF[p]
 )
 . 
 
@@ -100,7 +101,7 @@ refill -> L[MaxFluid][r]
 ).
 
 ||EVERYTHING = (PUMP || line[1..2]:LINE || line[1..2]:ALARM || BATTERY
- || line[1..2]:SAFE_DISPENSE) // ||line[1..2]:Settings_Before_Dispense)
+ || line[1..2]:SAFE_DISPENSE)  // ||line[1..2]:Settings_Before_Dispense)
 /{forall[i:RangeLine]  
 {line[i].medicineEnded/line[i].error,
 turnOn/line[i].turnOn,
@@ -113,6 +114,15 @@ line[i].unpinched/line[i].reduceError
 // Safety property
 property SAFE_DISPENSE    
 =(medicineEnded->refillAfterError -> SAFE_DISPENSE).
+
+fluent PUMPISON = <turnOn,turnOff>
+
+assert PUMPONOFF = <> PUMPISON
+
+fluent PINCHED = <line[i:RangeLine].pinched,line[i:RangeLine].unpinched>
+
+assert COULDPINCHED = [](PINCHED -> <> ! PINCHED)
+
 
 // ASK TAs
 //property Settings_Before_Dispense    
