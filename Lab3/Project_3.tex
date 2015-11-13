@@ -59,7 +59,17 @@ property. It would be particularly helpful if you include in your write-up the s
 
 \begin{enumerate}
     \item The pump cannot start pumping without the operator first confirming the settings on the pump.
+    
+    \textbf{Answer:}\\
+    It is a safety property, because it asserts that nothing bad happens during execution. In this case, that it is impossible to start the pump without confirming the settings. As it was said in our model description, modifying settings happens before the \verb|dispense| action. To check this we added property to LTSA scheme:\\
+    \textbf{add here property}
+    
     \item Electrical power can fail at any time.
+    \textbf{Answer:}\\
+    It is a liveness property, because it describes that something bad will eventually happen. Our model can allows to check this property, to be more precise, we can show, that electrical filure (\verb|plugOff| action) can appear infinitely often:
+     \textbf{add here property}
+      
+    
     \item If the backup battery power fails, pumping will not occur on any line.
     \item It is always possible to resume pumping after a failure.
     \item An alarm will sound on any line failure (blockage, pinching, empty fluid, or
