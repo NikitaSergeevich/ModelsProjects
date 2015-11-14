@@ -7,22 +7,6 @@ const EmptyBattery = 2 	// Battery is empty
 range BatteryMode = FullBattery .. EmptyBattery
 
 
-BATTERY = B[FullBattery],
-B[s:BatteryMode]=
-(//LowBattery
-when (s == LowBattery) charge -> B[FullBattery]
-|when (s == LowBattery) dischargedFully -> B[EmptyBattery]
-|when (s == LowBattery) changeBattery -> B[FullBattery]
-//EmptyBattery
-|when (s == EmptyBattery) charge -> B[LowBattery]
-|when (s == EmptyBattery) changeBattery -> B[FullBattery]
-//FullBattery
-|when (s == FullBattery) charge -> B[FullBattery]
-|when (s == FullBattery) discharge -> B[LowBattery]
-|when (s == FullBattery) changeBattery -> B[FullBattery]
-).
-
-
 //
 // States of power source
 // Assumption: 20% of battery is enough for 4 hours of working 
@@ -33,24 +17,41 @@ const Electricity = 0 	// Pump uses AC power
 const Battery = 1 	// Battery mode
 range PowerMode = Electricity .. Battery
 
-
 //Pump on/off
 const Off = 0
 const On = 1
 range OnOff = Off..On
 
-PUMP = TURNEDOFF[Battery],  //initial state
+PUMP = TURNEDOFF[Battery][FullBattery],  //initial state
 
-TURNEDOFF[p:PowerMode] = (turnOn -> P[p]),
+TURNEDOFF[p:PowerMode][b:BatteryMode] = 
+(turnOn -> P[p][b]
+| when (p==Electricity) plugOff -> P[Battery][b]
+| when (p==Battery) plugIn -> P[Electricity][b]
+|when (p==Electricity && b == FullBattery) charge ->  P[p][FullBattery]
+|when (p!=Electricity && b == FullBattery) discharge ->  P[p][LowBattery]
+),
 
-P[p:PowerMode] = (
+P[p:PowerMode][b:BatteryMode] = (
 // Change power mode
-when (p==Electricity) plugOff-> P[Battery]
-|when (p==Battery) plugIn-> P[Electricity]
+when (p==Electricity && b == EmptyBattery) plugOff-> turnOff -> TURNEDOFF[p][b]
+|when (p==Electricity && b != EmptyBattery) plugOff -> P[Battery][b]
+|when (p==Battery) plugIn-> P[Electricity][b]
 //OnOff. Different actions in order to make share actions
-| turnOff -> TURNEDOFF[p]
+|turnOff -> TURNEDOFF[p][b]
 //|when (p==Battery) turnOffBattery -> TURNEDOFF[p]
 //|when (p==Electricity) turnOffElectricity -> TURNEDOFF[p]
+
+|when (p==Electricity && b == LowBattery) charge -> P[p][LowBattery]
+|when (p!=Electricity && b == LowBattery) dischargedFully -> turnOff -> TURNEDOFF[p][EmptyBattery]
+|when (b == LowBattery) changeBattery ->  P[p][FullBattery]
+//EmptyBattery
+|when (p==Electricity && b == EmptyBattery) charge ->  P[p][LowBattery]
+|when (b == EmptyBattery) changeBattery ->  P[p][FullBattery]
+//FullBattery
+|when (p==Electricity && b == FullBattery) charge ->  P[p][FullBattery]
+|when (p!=Electricity && b == FullBattery) discharge ->  P[p][LowBattery]
+|when (b == FullBattery) changeBattery ->  P[p][FullBattery]
 )
 . 
 
@@ -102,7 +103,7 @@ const MaxFluid = 10
 range Volume = 0..MaxFluid
 
 //Rate set
-const LineOff = -1
+const LineOff = -1 //pump is off
 const NotSet = 0
 const MinRate = 1
 const MaxRate = 2
@@ -123,16 +124,17 @@ refill -> L[MaxFluid][r]
 |when (r > 0) pinched -> unpinched -> L[f][r]
 |when (r > 0) unplugged -> plugged -> L[f][r]
 |when (r > -1) turnOff -> L[f][LineOff]
-|when (r > 0) stopLine -> L[f][LineOff] 
-|when (r > -1) modifySettings -> setRate[rNew:MinRate..MaxRate] -> L[f][rNew]
-|when (r == -1) modifySettings -> L[f][NotSet] 
+|when (r > -1) dischargedFully -> L[f][LineOff]
+|when (r > 0) stopLine -> L[f][NotSet] 
+|when (r > -1) modifySettings -> setRate[rNew:MinRate..MaxRate] -> L[f][rNew] 
 ).
-||EVERYTHING = (PUMP || line[1..2]:LINE || line[1..2]:ALARMMEDICINE || line[1..2]:ALARMPINCHED || line[1..2]:ALARMPLUGGED || BATTERY
+||EVERYTHING = (PUMP || line[1..2]:LINE || line[1..2]:ALARMMEDICINE || line[1..2]:ALARMPINCHED || line[1..2]:ALARMPLUGGED
  || line[1..2]:SAFE_DISPENSE)  // ||line[1..2]:Settings_Before_Dispense)
 /{forall[i:RangeLine]  
 {
 turnOn/line[i].turnOn,
 turnOff/line[i].turnOff,
+dischargedFully/line[i].dischargedFully,
 line[i].medicineEnded/line[i].errorMedicine,
 line[i].refillAfterError/line[i].reduceErrorMedicine,
 line[i].pinched/line[i].errorPinched,
