@@ -11,12 +11,11 @@ BATTERY = B[FullBattery],
 B[s:BatteryMode]=
 (//LowBattery
 when (s == LowBattery) charge -> B[FullBattery]
-|when (s == LowBattery) discharge -> turnOffBattery -> B[EmptyBattery]
+|when (s == LowBattery) dischargedFully -> B[EmptyBattery]
 |when (s == LowBattery) changeBattery -> B[FullBattery]
 //EmptyBattery
 |when (s == EmptyBattery) charge -> B[LowBattery]
 |when (s == EmptyBattery) changeBattery -> B[FullBattery]
-|when (s == EmptyBattery) turnOffBattery -> B[EmptyBattery]
 //FullBattery
 |when (s == FullBattery) charge -> B[FullBattery]
 |when (s == FullBattery) discharge -> B[LowBattery]
@@ -49,8 +48,9 @@ P[p:PowerMode] = (
 when (p==Electricity) plugOff-> P[Battery]
 |when (p==Battery) plugIn-> P[Electricity]
 //OnOff. Different actions in order to make share actions
-|when (p==Battery) turnOffBattery -> TURNEDOFF[p]
-|when (p==Electricity) turnOffElectricity -> TURNEDOFF[p]
+| turnOff -> TURNEDOFF[p]
+//|when (p==Battery) turnOffBattery -> TURNEDOFF[p]
+//|when (p==Electricity) turnOffElectricity -> TURNEDOFF[p]
 )
 . 
 
@@ -61,41 +61,15 @@ const MaxErrors = 4
 range ErrorsLine = NoErrors..MaxErrors
 
 
-ALARMMEDICINE = (turnOn -> SILENCEALARMMEDICINE),
-SILENCEALARMMEDICINE = (errorMedicine -> LOUDALARMMEDICINE[1]
-|turnOff -> ALARMMEDICINE),
-LOUDALARMMEDICINE[e:ErrorsLine] = (
-when (e<MaxErrors) errorMedicine -> LOUDALARMMEDICINE[e+1]
-|when (e>1) reduceErrorMedicine -> LOUDALARMMEDICINE[e-1]
-|when (e==1) reduceErrorMedicine -> SILENCEALARMMEDICINE
-|turnOff -> ALARMMEDICINE).
+ALARM = (turnOn -> SILENCEALARM),
+SILENCEALARM = (error -> LOUDALARM[1]
+|turnOff -> ALARM),
+LOUDALARM[e:ErrorsLine] = (
+when (e<MaxErrors) error -> LOUDALARM[e+1]
+|when (e>1) reduceError -> LOUDALARM[e-1]
+|when (e==1) reduceError -> SILENCEALARM
+|turnOff -> ALARM).
 
-ALARMPINCHED = (turnOn -> SILENCEALARMPINCHED),
-SILENCEALARMPINCHED = (errorPinched -> LOUDALARMPINCHED[1]
-|turnOff -> ALARMPINCHED),
-LOUDALARMPINCHED[e:ErrorsLine] = (
-when (e<MaxErrors) errorPinched -> LOUDALARMPINCHED[e+1]
-|when (e>1) reduceErrorPinched -> LOUDALARMPINCHED[e-1]
-|when (e==1) reduceErrorPinched -> SILENCEALARMPINCHED
-|turnOff -> ALARMPINCHED).
-
-ALARMPLUGGED = (turnOn -> SILENCEALARMPLUGGED),
-SILENCEALARMPLUGGED = (errorPlugged -> LOUDALARMPLUGGED[1]
-|turnOff -> ALARMPLUGGED),
-LOUDALARMPLUGGED[e:ErrorsLine] = (
-when (e<MaxErrors) errorPlugged -> LOUDALARMPLUGGED[e+1]
-|when (e>1) reduceErrorPlugged -> LOUDALARMPLUGGED[e-1]
-|when (e==1) reduceErrorPlugged -> SILENCEALARMPLUGGED
-|turnOff -> ALARMPLUGGED).
-
-ALARMBATTERY = (turnOn -> SILENCEALARMBATTERY),
-SILENCEALARMBATTERY = (errorBattery -> LOUDALARMBATTERY[1]
-|turnOff -> ALARMBATTERY),
-LOUDALARMBATTERY[e:ErrorsLine] = (
-when (e<MaxErrors) errorBattery -> LOUDALARMBATTERY[e+1]
-|when (e>1) reduceErrorBattery -> LOUDALARMBATTERY[e-1]
-|when (e==1) reduceErrorBattery -> SILENCEALARMBATTERY
-|turnOff -> ALARMBATTERY).
 
 const MaxFluid = 10
 range Volume = 0..MaxFluid
@@ -120,25 +94,21 @@ refill -> L[MaxFluid][r]
 |when (f < r) medicineEnded -> refillAfterError -> L[MaxFluid][r] //поставить приоритет этого действия
 |refill-> L[MaxFluid][r] //refill2 - because it should be different with refill, because refill is concurrent with reduce from LOUDALARM
 |when (r > 0) pinched -> unpinched -> L[f][r]
-|when (r > 0) unplugged -> plugged -> L[f][r]
 |when (r > -1) turnOff -> L[f][LineOff]
 |when (r > 0) stopLine -> L[f][LineOff] 
 |when (r > -1) modifySettings -> setRate[rNew:MinRate..MaxRate] -> L[f][rNew]
 |when (r == -1) modifySettings -> L[f][NotSet] 
 ).
 
-||EVERYTHING = (PUMP || line[1..2]:LINE || line[1..2]:ALARMMEDICINE || line[1..2]:ALARMPINCHED || line[1..2]:ALARMPLUGGED || BATTERY
+||EVERYTHING = (PUMP || line[1..2]:LINE || line[1..2]:ALARM || BATTERY
  || line[1..2]:SAFE_DISPENSE)  // ||line[1..2]:Settings_Before_Dispense)
 /{forall[i:RangeLine]  
-{
+{line[i].medicineEnded/line[i].error,
 turnOn/line[i].turnOn,
 turnOff/line[i].turnOff,
-line[i].medicineEnded/line[i].errorMedicine,
-line[i].refillAfterError/line[i].reduceErrorMedicine,
-line[i].pinched/line[i].errorPinched,
-line[i].unpinched/line[i].reduceErrorPinched,
-line[i].unplugged/line[i].errorPlugged,
-line[i].plugged/line[i].reduceErrorPlugged
+line[i].refillAfterError/line[i].reduceError,
+line[i].pinched/line[i].error,
+line[i].unpinched/line[i].reduceError
 }}.
 
 // Safety property
