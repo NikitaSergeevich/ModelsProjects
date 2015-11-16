@@ -147,7 +147,7 @@ refill -> L[MaxFluid][r]
 |when (f < r) medicineEnded -> refillAfterError -> L[MaxFluid][r] //поставить приоритет этого действия
 |refill-> L[MaxFluid][r] //refill2 - because it should be different with refill, because refill is concurrent with reduce from LOUDALARM
 |when (r > 0) pinched -> unpinched -> L[f][r]
-|when (r > 0) unplugged -> plugged -> L[f][r]
+|when (r > 0) plugged -> unplugged -> L[f][r]
 |when (r > -1) turnOff -> L[f][LineOff]
 |when (r > -1) dischargedFully -> L[f][LineOff]
 |when (r > -1) plugOffToEmptyBattery -> L[f][LineOff]
@@ -166,8 +166,8 @@ line[i].medicineEnded/line[i].errorMedicine,
 line[i].refillAfterError/line[i].reduceErrorMedicine,
 line[i].pinched/line[i].errorPinched,
 line[i].unpinched/line[i].reduceErrorPinched,
-line[i].unplugged/line[i].errorPlugged,
-line[i].plugged/line[i].reduceErrorPlugged
+line[i].plugged/line[i].errorPlugged,
+line[i].unplugged/line[i].reduceErrorPlugged
 }}.
 
 // Safety property
