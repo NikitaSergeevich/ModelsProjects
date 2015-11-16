@@ -79,7 +79,7 @@ SILENCEALARMMEDICINE = (errorMedicine -> LOUDALARMMEDICINE[1]
 LOUDALARMMEDICINE[s:OnOff] = (
 when (s==1) medicineAlarm -> LOUDALARMMEDICINE[1]
 |reduceErrorMedicine -> SILENCEALARMMEDICINE
-|when (s==1) stopMedicineAlarm -> LOUDALARMMEDICINE[0]
+|when (s==1) muteMedicineAlarm -> LOUDALARMMEDICINE[0]
 |turnOff -> ALARMMEDICINE
 |dischargedFully -> ALARMMEDICINE
 |plugOffToEmptyBattery -> ALARMMEDICINE).
@@ -91,7 +91,7 @@ SILENCEALARMPINCHED = (errorPinched -> LOUDALARMPINCHED[1]
 |plugOffToEmptyBattery -> ALARMPINCHED),
 LOUDALARMPINCHED[s:OnOff] = (
 when (s==1) pinchedAlarm -> LOUDALARMPINCHED[1]
-|when (s==1) stopPinchedAlarm -> LOUDALARMPINCHED[0]
+|when (s==1) mutePinchedAlarm -> LOUDALARMPINCHED[0]
 |reduceErrorPinched -> SILENCEALARMPINCHED
 |turnOff -> ALARMPINCHED
 |dischargedFully -> ALARMPINCHED
@@ -104,7 +104,7 @@ SILENCEALARMPLUGGED = (errorPlugged -> LOUDALARMPLUGGED[1]
 |plugOffToEmptyBattery -> ALARMPLUGGED),
 LOUDALARMPLUGGED[s:OnOff] = (
 when (s==1) pluggedAlarm -> LOUDALARMPLUGGED[1]
-|when (s==1) stopPluggedAlarm -> LOUDALARMPLUGGED[0]
+|when (s==1) mutePluggedAlarm -> LOUDALARMPLUGGED[0]
 |reduceErrorPlugged -> SILENCEALARMPLUGGED
 |turnOff -> ALARMPLUGGED
 |dischargedFully -> ALARMPLUGGED
@@ -114,6 +114,7 @@ when (s==1) pluggedAlarm -> LOUDALARMPLUGGED[1]
 SOUND2 = SILENCEDSOUND2,
 SILENCEDSOUND2 = (
 alarm2 -> ALARMSOUND2
+|reduceAlarm2 -> SILENCEDSOUND2
 ),
 ALARMSOUND2 = (
 backupAlarm2 -> ALARMSOUND2
@@ -150,7 +151,7 @@ refill -> L[MaxFluid][r]
 |when (r > -1) dischargedFully -> L[f][LineOff]
 |when (r > -1) plugOffToEmptyBattery -> L[f][LineOff]
 |when (r > 0) stopLine -> L[f][NotSet] 
-|when (r > -1) modifySettings -> setRate[rNew:MinRate..MaxRate] -> L[f][rNew] 
+|when (r > -1) setRate[rNew:MinRate..MaxRate] -> L[f][rNew] 
 ).
 ||EVERYTHING = (PUMP || line[1..2]:LINE || line[1..2]:ALARMMEDICINE || line[1..2]:ALARMPINCHED || line[1..2]:ALARMPLUGGED 
  || line[1..2]:SAFE_DISPENSE || SOUND2) //|| SOUND2)  // ||line[1..2]:Settings_Before_Dispense)
@@ -196,7 +197,7 @@ property SAFE_DISPENSE
 //Aleksandr
 //6. In the absence of errors the pump will continue to pump until the
 // treatment is finished.
-fluent MEDICINE_ENDED = <medicineEnded, refillAfterError>
+//fluent MEDICINE_ENDED = <medicineEnded, refillAfterError>
 assert PUMPING_MEDICINE = [](dispense U MEDICINE_ENDED)
 
 //7.Artem. The system never deadlocks.(done)
