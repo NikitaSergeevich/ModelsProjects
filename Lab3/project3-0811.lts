@@ -31,7 +31,7 @@ TURNEDOFF[p:PowerMode][b:BatteryMode] =
 
 //LowBattery
 |when (p==Electricity && b == LowBattery) charge -> TURNEDOFF[p][LowBattery]
-|when (p==Battery && b == LowBattery) dischargedFully -> TURNEDOFF[p][EmptyBattery]
+|when (p==Battery && b == LowBattery) discharge -> TURNEDOFF[p][EmptyBattery]
 |when (b == LowBattery) changeBattery ->  TURNEDOFF[p][FullBattery]
 //EmptyBattery
 |when (p==Electricity && b == EmptyBattery) charge ->  TURNEDOFF[p][LowBattery]
@@ -44,14 +44,14 @@ TURNEDOFF[p:PowerMode][b:BatteryMode] =
 
 P[p:PowerMode][b:BatteryMode] = (
 // Change power mode
-when (p==Electricity && b == EmptyBattery) plugOff-> turnOff -> TURNEDOFF[p][b]
+when (p==Electricity && b == EmptyBattery) plugOffToEmptyBattery -> TURNEDOFF[p][b]
 |when (p==Electricity && b != EmptyBattery) plugOff -> P[Battery][b]
 |when (p==Battery) plugIn-> P[Electricity][b]
 //OnOff. Different actions in order to make share actions
 |turnOff -> TURNEDOFF[p][b]
 //LowBattery
 |when (p==Electricity && b == LowBattery) charge -> P[p][LowBattery]
-|when (p!=Electricity && b == LowBattery) dischargedFully -> turnOff -> TURNEDOFF[p][EmptyBattery]
+|when (p==Battery && b == LowBattery) dischargedFully  -> TURNEDOFF[p][EmptyBattery]
 |when (b == LowBattery) changeBattery ->  P[p][FullBattery]
 //EmptyBattery
 |when (p==Electricity && b == EmptyBattery) charge ->  P[p][LowBattery]
@@ -72,38 +72,55 @@ range ErrorsLine = NoErrors..MaxErrors
 
 ALARMMEDICINE = (turnOn -> SILENCEALARMMEDICINE),
 SILENCEALARMMEDICINE = (errorMedicine -> LOUDALARMMEDICINE[1]
-|turnOff -> ALARMMEDICINE),
+|turnOff -> ALARMMEDICINE
+|dischargedFully -> ALARMMEDICINE
+|plugOffToEmptyBattery -> ALARMMEDICINE
+ ),
 LOUDALARMMEDICINE[e:ErrorsLine] = (
 when (e<MaxErrors) errorMedicine -> LOUDALARMMEDICINE[e+1]
 |when (e>1) reduceErrorMedicine -> LOUDALARMMEDICINE[e-1]
 |when (e==1) reduceErrorMedicine -> SILENCEALARMMEDICINE
-|turnOff -> ALARMMEDICINE).
+|turnOff -> ALARMMEDICINE
+|dischargedFully -> ALARMMEDICINE
+|plugOffToEmptyBattery -> ALARMMEDICINE).
 
 ALARMPINCHED = (turnOn -> SILENCEALARMPINCHED),
-SILENCEALARMPINCHED = (errorPinched -> alarm -> LOUDALARMPINCHED[1]
-|turnOff -> ALARMPINCHED),
+SILENCEALARMPINCHED = (errorPinched -> LOUDALARMPINCHED[1]
+|turnOff -> ALARMPINCHED
+|dischargedFully -> ALARMPINCHED
+|plugOffToEmptyBattery -> ALARMPINCHED),
 LOUDALARMPINCHED[e:ErrorsLine] = (
 when (e<MaxErrors) errorPinched -> LOUDALARMPINCHED[e+1]
 |when (e>1) reduceErrorPinched -> LOUDALARMPINCHED[e-1]
 |when (e==1) reduceErrorPinched -> SILENCEALARMPINCHED
-|turnOff -> ALARMPINCHED).
+|turnOff -> ALARMPINCHED
+|dischargedFully -> ALARMPINCHED
+|plugOffToEmptyBattery -> ALARMPINCHED).
 
 ALARMPLUGGED = (turnOn -> SILENCEALARMPLUGGED),
 SILENCEALARMPLUGGED = (errorPlugged -> LOUDALARMPLUGGED[1]
-|turnOff -> ALARMPLUGGED),
+|turnOff -> ALARMPLUGGED
+|dischargedFully -> ALARMPLUGGED
+|plugOffToEmptyBattery -> ALARMPLUGGED),
 LOUDALARMPLUGGED[e:ErrorsLine] = (
 when (e<MaxErrors) errorPlugged -> LOUDALARMPLUGGED[e+1]
 |when (e>1) reduceErrorPlugged -> LOUDALARMPLUGGED[e-1]
 |when (e==1) reduceErrorPlugged -> SILENCEALARMPLUGGED
-|turnOff -> ALARMPLUGGED).
+|turnOff -> ALARMPLUGGED
+|dischargedFully -> ALARMPLUGGED
+|plugOffToEmptyBattery -> ALARMPLUGGED).
 
 ALARMBATTERY = (turnOn -> SILENCEALARMBATTERY),
 SILENCEALARMBATTERY = (errorBattery -> LOUDALARMBATTERY[1]
-|turnOff -> ALARMBATTERY),
+|turnOff -> ALARMBATTERY
+|dischargedFully -> ALARMBATTERY
+|plugOffToEmptyBattery -> ALARMBATTERY),
 LOUDALARMBATTERY[e:ErrorsLine] = (
 when (e<MaxErrors) errorBattery -> LOUDALARMBATTERY[e+1]
 |when (e>1) reduceErrorBattery -> LOUDALARMBATTERY[e-1]
 |when (e==1) reduceErrorBattery -> SILENCEALARMBATTERY
+|dischargedFully -> ALARMBATTERY
+|plugOffToEmptyBattery -> ALARMBATTERY
 |turnOff -> ALARMBATTERY).
 
 
@@ -132,6 +149,8 @@ refill -> L[MaxFluid][r]
 |when (r > 0) pinched -> unpinched -> L[f][r]
 |when (r > 0) unplugged -> plugged -> L[f][r]
 |when (r > -1) turnOff -> L[f][LineOff]
+|when (r > -1) dischargedFully -> L[f][LineOff]
+|when (r > -1) plugOffToEmptyBattery -> L[f][LineOff]
 |when (r > 0) stopLine -> L[f][NotSet] 
 |when (r > -1) modifySettings -> setRate[rNew:MinRate..MaxRate] -> L[f][rNew] 
 ).
@@ -142,6 +161,7 @@ refill -> L[MaxFluid][r]
 turnOn/line[i].turnOn,
 turnOff/line[i].turnOff,
 dischargedFully/line[i].dischargedFully,
+plugOffToEmptyBattery/line[i].plugOffToEmptyBattery,
 line[i].medicineEnded/line[i].errorMedicine,
 line[i].refillAfterError/line[i].reduceErrorMedicine,
 line[i].pinched/line[i].errorPinched,
