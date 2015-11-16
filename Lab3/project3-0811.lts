@@ -1,9 +1,9 @@
 const LineNum = 2
 range RangeLine = 1..LineNum
 
-const FullBattery = 2 	// Pump uses battery with charge is enough for more than 4 hours
-const LowBattery = 1 	// Pump uses battery with charge is enough for less than 4 hours
 const EmptyBattery = 0 	// Battery is empty
+const LowBattery = 1 	// Pump uses battery with charge is enough for less than 4 hours
+const FullBattery = 2 	// Pump uses battery with charge is enough for more than 4 hours
 range BatteryMode =  EmptyBattery..FullBattery
 
 

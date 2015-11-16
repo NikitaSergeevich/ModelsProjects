@@ -1,0 +1,6 @@
+Power failure happens only if the dischargedFully action happens
+
+fluent SETTINGS_ARE_SET = <line[i:RangeLine].modifySettings, {line[i:RangeLine].errorMedicine, line[i:RangeLine].errorPinched, line[i:RangeLine].errorPlugged, turnOff, dischargedFully}>
+assert DISPENSE_ONLY_AFTER_SETTINGS = [] ( line[i:RangeLine].dispense && SETTINGS_ARE_SET)
+
+We decide to make only a full refillment for the model, because each discrete volume value for refillment will take additional action and even with 5 levels of volume for 2 lines, there will be 10 additional actions that will complicate work with the model.
