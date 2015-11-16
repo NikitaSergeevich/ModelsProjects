@@ -150,18 +150,41 @@ line[i].unplugged/line[i].errorPlugged,
 line[i].plugged/line[i].reduceErrorPlugged
 }}.
 
-// Safety property
+fluent PUMPISON = <turnOn,turnOff>
+assert PUMPONOFF = <> PUMPISON
+fluent PINCHED = <line[i:RangeLine].pinched,line[i:RangeLine].unpinched>
+assert COULDPINCHED = [](PINCHED -> <> ! PINCHED)
+
+//Artur
+//1.The pump cannot start pumping without the operator first confirming the settings on the pump.
+
+//Artur
+//2.Electrical power can fail at any time.
+
+//Nikita
+//3.If the backup battery power fails, pumping will not occur on any line.
+fluent DISCHARGED = <dischargedFully, {charge, changeBattery}>
+assert NODISPENSE = []!(<>DISCHARGED -> X dispense)
+
+//Nikita
+//4.It is always possible to resume pumping after a failure.
+fluent MEDICINE_ENDED = <medicineEnded, refillAfterError>
+
+//Aleksandr
+//5.An alarm will sound on any line failure (blockage, pinching, empty fluid, or
+//whatever failures you model)
 property SAFE_DISPENSE    
 =(medicineEnded->refillAfterError -> SAFE_DISPENSE).
 
-fluent PUMPISON = <turnOn,turnOff>
+//Aleksandr
+//6. In the absence of errors the pump will continue to pump until the
+// treatment is finished.
+fluent MEDICINE_ENDED = <medicineEnded, refillAfterError>
+assert PUMPING_MEDICINE = [](dispense U MEDICINE_ENDED)
 
-assert PUMPONOFF = <> PUMPISON
+//7.Artem. The system never deadlocks.(done)
 
-fluent PINCHED = <line[i:RangeLine].pinched,line[i:RangeLine].unpinched>
-
-assert COULDPINCHED = [](PINCHED -> <> ! PINCHED)
-
+//8.Artem. (two properties)
 
 // ASK TAs
 //property Settings_Before_Dispense    
