@@ -66,8 +66,8 @@ when (p==Electricity && b == EmptyBattery) plugOffToEmptyBattery -> TURNEDOFF[p]
 
 //Number of errors which can occur in the line
 const NoErrors = 1
-const MaxErrors = 4
-range ErrorsLine = NoErrors..MaxErrors
+const MaxErrors = 2
+range Errors = NoErrors..MaxErrors
 
 
 ALARMMEDICINE = (turnOn -> SILENCEALARMMEDICINE),
@@ -77,7 +77,8 @@ SILENCEALARMMEDICINE = (errorMedicine -> LOUDALARMMEDICINE[1]
 |plugOffToEmptyBattery -> ALARMMEDICINE
  ),
 LOUDALARMMEDICINE[s:OnOff] = (
-reduceErrorMedicine -> SILENCEALARMMEDICINE
+when (s==1) medicineAlarm -> LOUDALARMMEDICINE[1]
+|reduceErrorMedicine -> SILENCEALARMMEDICINE
 |when (s==1) stopMedicineAlarm -> LOUDALARMMEDICINE[0]
 |turnOff -> ALARMMEDICINE
 |dischargedFully -> ALARMMEDICINE
@@ -89,7 +90,8 @@ SILENCEALARMPINCHED = (errorPinched -> LOUDALARMPINCHED[1]
 |dischargedFully -> ALARMPINCHED
 |plugOffToEmptyBattery -> ALARMPINCHED),
 LOUDALARMPINCHED[s:OnOff] = (
-when (s==1) stopPinchedAlarm -> LOUDALARMPINCHED[0]
+when (s==1) pinchedAlarm -> LOUDALARMPINCHED[1]
+|when (s==1) stopPinchedAlarm -> LOUDALARMPINCHED[0]
 |reduceErrorPinched -> SILENCEALARMPINCHED
 |turnOff -> ALARMPINCHED
 |dischargedFully -> ALARMPINCHED
@@ -101,21 +103,24 @@ SILENCEALARMPLUGGED = (errorPlugged -> LOUDALARMPLUGGED[1]
 |dischargedFully -> ALARMPLUGGED
 |plugOffToEmptyBattery -> ALARMPLUGGED),
 LOUDALARMPLUGGED[s:OnOff] = (
-when (s==1) stopPluggedAlarm -> LOUDALARMPLUGGED[0]
+when (s==1) pluggedAlarm -> LOUDALARMPLUGGED[1]
+|when (s==1) stopPluggedAlarm -> LOUDALARMPLUGGED[0]
 |reduceErrorPlugged -> SILENCEALARMPLUGGED
 |turnOff -> ALARMPLUGGED
 |dischargedFully -> ALARMPLUGGED
 |plugOffToEmptyBattery -> ALARMPLUGGED).
 
-SILENCEALARMBATTERY = (dischargedFully -> LOUDALARMBATTERY[1]
-|plugIn -> SILENCEALARMBATTERY
-|changeBattery -> SILENCEALARMBATTERY
+
+SOUND2 = SILENCEDSOUND2,
+SILENCEDSOUND2 = (
+alarm2 -> ALARMSOUND2
 ),
-LOUDALARMBATTERY[s:OnOff] = (
-when (s==1) stopBatteryAlarm -> LOUDALARMBATTERY[0]
-|plugIn -> SILENCEALARMBATTERY
-|changeBattery -> SILENCEALARMBATTERY
+ALARMSOUND2 = (
+backupAlarm2 -> ALARMSOUND2
+|reduceAlarm2 -> SILENCEDSOUND2
 ).
+
+
 
 const MaxFluid = 10
 range Volume = 0..MaxFluid
@@ -147,8 +152,8 @@ refill -> L[MaxFluid][r]
 |when (r > 0) stopLine -> L[f][NotSet] 
 |when (r > -1) modifySettings -> setRate[rNew:MinRate..MaxRate] -> L[f][rNew] 
 ).
-||EVERYTHING = (PUMP || line[1..2]:LINE || line[1..2]:ALARMMEDICINE || line[1..2]:ALARMPINCHED || line[1..2]:ALARMPLUGGED || SILENCEALARMBATTERY
- || line[1..2]:SAFE_DISPENSE)  // ||line[1..2]:Settings_Before_Dispense)
+||EVERYTHING = (PUMP || line[1..2]:LINE || line[1..2]:ALARMMEDICINE || line[1..2]:ALARMPINCHED || line[1..2]:ALARMPLUGGED 
+ || line[1..2]:SAFE_DISPENSE || SOUND2) //|| SOUND2)  // ||line[1..2]:Settings_Before_Dispense)
 /{forall[i:RangeLine]  
 {
 turnOn/line[i].turnOn,
@@ -160,7 +165,11 @@ line[i].refillAfterError/line[i].reduceErrorMedicine,
 line[i].pinched/line[i].errorPinched,
 line[i].unpinched/line[i].reduceErrorPinched,
 line[i].plugged/line[i].errorPlugged,
-line[i].unplugged/line[i].reduceErrorPlugged
+line[i].unplugged/line[i].reduceErrorPlugged,
+dischargedFully/alarm2,
+plugOffToEmptyBattery/alarm2,
+plugIn/reduceAlarm2,
+changeBattery/reduceAlarm2
 }}.
 
 //Artur
