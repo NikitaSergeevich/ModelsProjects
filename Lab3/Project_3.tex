@@ -60,8 +60,14 @@ property. It would be particularly helpful if you include in your write-up the s
 \begin{enumerate}
     \item The pump cannot start pumping without the operator first confirming the settings on the pump.
     
-    \textbf{Answer:}\\
-    It is a safety property, because it asserts that nothing bad happens during execution. In this case, that it is impossible to start the pump without confirming the settings. As it was said in our model description, modifying settings happens before the \verb|dispense| action. To check this we added property to LTSA scheme:\\
+    \textbf{Answer:}
+    \begin{enumerate}
+    \item It is a safety property, because it asserts that nothing bad happens during execution. In this case, that it is impossible to start the pump without confirming the settings.
+    \item  Our model allows to check the property. Us it is mentioned in the model description, we have modelled only one type of settings - setting a rate for a concrete infusion line. Therefore, \verb|dispense| action happens only after \verb|setRate[i]| action.
+    \item Yes, it is true. Here is the property and LTSA output.
+    
+    \end{enumerate}
+    
     \textbf{add here property}
     
     \item Electrical power can fail at any time.\\
