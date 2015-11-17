@@ -105,26 +105,56 @@ Analysed in: 473ms
     socket (electricity) or battery in case if battery is not empty. Another words, nothing wrong (pumping on any line) will
     not occur in case backup battery power fails.
  
-    \item Our model allows to check this property. According to our assumption, backup battery fail is represented by fluent
-    $DISCHARGED$ and can occur in two cases:\\
+    \item Our model allows to check this property. Backup battery fail is represented by fluent
+    $DISCHARGED$ and according to our assumption, can occur in two cases:\\
     1. If pump works from electricity with empty battery and electricity fails by \textbf{Check it:} $plugOffToEmptyBattery$
     $plug\_off$ action.\\
     2. If pump works from battery and battery become empty during pumping (by double $discharge$ action).
     We can fix this issue and continue dispense by using $chargeBattery$ or $plugIn$ action.\\
-    \textbf{Check it:} Assert or Property NODISPENSE tells us that $dispense$ action is never available during battery fail.
+    In our model we check this behaviour using assert NODISPENSE which tells us that $dispense$ action is never available
+    during battery fail.
     \begin{verbatim}
     fluent DISCHARGED = <plugOffToEmptyBattery, {chargeBattery, plugIn}>
     assert NODISPENSE = [](DISCHARGED -> !line[i:RangeLine].dispense)
     \end{verbatim}
     
-    \item NODISPENSE property is not violated in our model. LTSA output.
+    \item NODISPENSE property is not violated in our model. LTSA checker output:
     \begin{verbatim}
     Violated.
     \end{verbatim} 
     \end{enumerate}    
     
     
-    \item It is always possible to resume pumping after a failure.
+    \item It is always possible to resume pumping after a failure.\\
+    \textbf{Answer:}
+    \begin{enumerate}
+    \item It is liveness property. According to our specification 4 type of known failures can occur and interrupt
+    pumping.
+    There are: 1.Backup battery fail (described previously) 2.Plugged Line 3.Pinched Line 4.Medicine ended. After any
+    failure user can perform set of actions to resume dispense of medicine.
+ 
+    \item Our model allows to check this property. Failures are represented by fluent: 1.$DISCHARGED$ 2.$PLUGGED$ 
+    3.$PINCHED$ 4.$MEDICINE\_ENDED$ and we have assert $RESUMEDISPENCE$ which checks that after any failure $dispence$ action
+    will eventually happen. Any failure can be fixed by performing action described in the fluent.\\
+    \begin{verbatim}
+    fluent DISCHARGED = <plugOffToEmptyBattery, {chargeBattery, plugIn}>
+    fluent MEDICINE_ENDED[i:RangeLine] = <line[i].medicineEnded, line[i].refillAfterError>
+    fluent PINCHED[i:RangeLine] = <line[i].pinched, line[i].unpinched>
+    fluent PLUGGED[i:RangeLine] = <line[i].plugged, line[i].unplugged>
+    assert RESUMEDISPENCE = [](exists[i:RangeLine](MEDICINE_ENDED[i] || PINCHED[i] || PLUGGED[i] -> <>line[i].dispence))
+    \end{verbatim}
+    
+    \item $RESUMEDISPENCE$ property is not violated in our model. LTSA checker output:
+    \begin{verbatim}
+    -- States: 370000 Transitions: 4297076 Memory used: 42270K
+    -- States: 380000 Transitions: 4405020 Memory used: 47613K
+    -- States: 390000 Transitions: 4509834 Memory used: 37128K
+    -- States: 390726 Transitions: 4517989 Memory used: 49377K
+    No LTL Property violations detected.
+    LTL Property Check in: 4437ms
+    \end{verbatim} 
+    \end{enumerate}
+    
     \item An alarm will sound on any line failure (blockage, pinching, empty fluid, or
 whatever failures you model).\\
     \textbf{Answer:}
