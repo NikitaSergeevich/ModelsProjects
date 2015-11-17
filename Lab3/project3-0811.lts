@@ -6,7 +6,6 @@ const LowBattery = 1 	// Pump uses battery with charge is enough for less than 4
 const EmptyBattery = 0 	// Battery is empty
 range BatteryMode =  EmptyBattery..FullBattery
 
-
 //
 // States of power source
 // Assumption: 20% of battery is enough for 4 hours of working 
@@ -63,12 +62,10 @@ when (p==Electricity && b == EmptyBattery) plugOffToEmptyBattery -> TURNEDOFF[p]
 )
 . 
 
-
 //Number of errors which can occur in the line
 const NoErrors = 1
 const MaxErrors = 2
 range Errors = NoErrors..MaxErrors
-
 
 ALARMMEDICINE = (turnOn -> SILENCEALARMMEDICINE),
 SILENCEALARMMEDICINE = (errorMedicine -> LOUDALARMMEDICINE[1]
@@ -121,8 +118,6 @@ backupAlarm2 -> ALARMSOUND2
 |reduceAlarm2 -> SILENCEDSOUND2
 ).
 
-
-
 const MaxFluid = 10
 range Volume = 0..MaxFluid
 
@@ -153,6 +148,7 @@ refill -> L[MaxFluid][r]
 |when (r > 0) stopLine -> L[f][NotSet] 
 |when (r > -1) setRate[rNew:MinRate..MaxRate] -> L[f][rNew] 
 ).
+
 ||EVERYTHING = (PUMP || line[1..2]:LINE || line[1..2]:ALARMMEDICINE || line[1..2]:ALARMPINCHED || line[1..2]:ALARMPLUGGED 
  || line[1..2]:SAFE_DISPENSE || SOUND2) //|| SOUND2)  // ||line[1..2]:Settings_Before_Dispense)
 /{forall[i:RangeLine]  
@@ -173,8 +169,13 @@ plugIn/reduceAlarm2,
 changeBattery/reduceAlarm2
 }}.
 
+
+//line[i:RangeLine].
 //Artur
 //1.The pump cannot start pumping without the operator first confirming the settings on the pump.
+fluent SETTINGS_ARE_SET[i:RangeLine] = <line[i].setRate[j:MinRate..MaxRate], {turnOff, plugOffToEmptyBattery}>
+assert DISPENSE_ONLY_AFTER_SETTINGS = forall[i:RangeLine] [](line[i].dispense -> SETTINGS_ARE_SET[i])
+
 
 //Artur
 //2.Electrical power can fail at any time.
