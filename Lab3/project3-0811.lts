@@ -36,7 +36,6 @@ TURNEDOFF[p:PowerMode][b:BatteryMode] =
 |when (p==Electricity && b == EmptyBattery) charge ->  TURNEDOFF[p][LowBattery]
 |when (b == EmptyBattery) changeBattery ->  TURNEDOFF[p][FullBattery]
 //FullBattery
-|when (p==Electricity && b == FullBattery) charge ->  TURNEDOFF[p][FullBattery]
 |when (p==Battery && b == FullBattery) discharge ->  TURNEDOFF[p][LowBattery]
 |when (b == FullBattery) changeBattery ->  TURNEDOFF[p][FullBattery]
 ),
@@ -50,16 +49,16 @@ when (p==Electricity && b == EmptyBattery) plugOffToEmptyBattery -> TURNEDOFF[p]
 |turnOff -> TURNEDOFF[p][b]
 //LowBattery
 |when (p==Electricity && b == LowBattery) charge -> P[p][LowBattery]
-|when (p==Battery && b == LowBattery) dischargedFully  -> TURNEDOFF[p][EmptyBattery]
+|when (p==Battery && b == LowBattery) discharge -> dischargedFully  -> TURNEDOFF[p][EmptyBattery]
 |when (b == LowBattery) changeBattery ->  P[p][FullBattery]
 //EmptyBattery
 |when (p==Electricity && b == EmptyBattery) charge ->  P[p][LowBattery]
 |when (b == EmptyBattery) changeBattery ->  P[p][FullBattery]
 //FullBattery
-|when (p==Electricity && b == FullBattery) charge ->  P[p][FullBattery]
 |when (p!=Electricity && b == FullBattery) discharge ->  P[p][LowBattery]
 |when (b == FullBattery) changeBattery ->  P[p][FullBattery]
 )
+
 . 
 
 //Number of errors which can occur in the line
@@ -167,7 +166,8 @@ dischargedFully/alarm2,
 plugOffToEmptyBattery/alarm2,
 plugIn/reduceAlarm2,
 changeBattery/reduceAlarm2
-}}.
+}}
+.
 
 
 //line[i:RangeLine].
@@ -179,6 +179,8 @@ assert DISPENSE_ONLY_AFTER_SETTINGS = forall[i:RangeLine] [](line[i].dispense ->
 
 //Artur
 //2.Electrical power can fail at any time.
+assert ELECTRICAL_FAILURE_AT_ANY_TIME = []<> plugOff
+
 
 //Nikita
 //3.If the backup battery power fails, pumping will not occur on any line.
