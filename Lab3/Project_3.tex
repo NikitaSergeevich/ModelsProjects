@@ -186,7 +186,47 @@ Depth 9779 -- States: 90000 Transitions: 769373 Memory used: 106446K
 Composed in 974ms
     \end{verbatim}
     As we can see system is not in a deadlock anytime.
+    
     \item Two other properties of your choosing.
+    
+    \begin{itemize}
+    \item The main action, dispense, may be made infinitely often (there is no irreversible problems after which it is impossible to make a dispense)
+    
+    \textbf{Answer:}
+    \begin{enumerate}
+    	\item It is a safety property, because it asserts that nothing bad happens during execution. In this case, that it is impossible to get into loop from which it is impossible to make a dispense.
+    	\item  Our model allows to check the property. 
+    	\item Yes, it is true. Here is the property and LTSA output.
+    	\begin{verbatim}
+    	
+    	assert INFINITE_DISPENSE = []<> line[i:RangeLine].dispense
+    	 \end{verbatim}
+    	
+    \item	There is more specific version: if there is necessary amount of medicine, dispense, may be made infinitely often (there is no irreversible problems)
+    
+    \begin{verbatim}
+    	fluent ENOUGH_MEDICINE[i:RangeLine] =
+    	<{line[i].refillAfterError, line[i].refill}, line[i].medicineEnded>
+    	assert CONTINUE_DISPENSING =
+    	forall[i:RangeLine] [](ENOUGH_MEDICINE[i] -> [] <>line[i].dispense)
+    	
+    	\end{verbatim}
+    	
+    	\item Additional check that we used in our model: battery can not charge if the pump is not connected to AC
+    	
+    	 \begin{verbatim}
+    	fluent PUMP_CONNECTED_TO_AC =
+    	<plugIn, {plugOff, plugOffToEmptyBattery}>
+    	assert CHARGE_ONLY_FROM_BATTERY  = 
+    	(charge -> ! PUMP_CONNECTED_TO_AC )
+    	
+    \end{verbatim}
+    \end{enumerate}
+    \end{itemize}
+     
+    
+    
+    
 \end{enumerate}
 
 Now come up with two more properties that are not in the above list, and check them.
