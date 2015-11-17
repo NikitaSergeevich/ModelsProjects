@@ -60,39 +60,116 @@ property. It would be particularly helpful if you include in your write-up the s
 \begin{enumerate}
     \item The pump cannot start pumping without the operator first confirming the settings on the pump.
     
-    \textbf{Answer:}\\
-    It is a safety property, because it asserts that nothing bad happens during execution. In this case, that it is impossible to start the pump without confirming the settings. As it was said in our model description, modifying settings happens before the \verb|dispense| action. To check this we added property to LTSA scheme:\\
-    \textbf{add here property}
+    \textbf{Answer:}
+    \begin{enumerate}
+    \item It is a safety property, because it asserts that nothing bad happens during execution. In this case, that it is impossible to start the pump without confirming the settings.
+    \item  Our model allows to check the property. As it was mentioned in our model description, we have modelled only one type of settings - setting a rate for a concrete infusion line. Therefore, \verb|dispense| action happens only after \verb|setRate[i]| action.
+    \item Yes, it is true. Here is the property and LTSA output.
+	\begin{verbatim}
+fluent SETTINGS_ARE_SET[i:RangeLine] =
+<line[i].setRate[j:MinRate..MaxRate], {turnOff, plugOffToEmptyBattery}>
+assert DISPENSE_ONLY_AFTER_SETTINGS =
+forall[i:RangeLine] [](line[i].dispense -> SETTINGS_ARE_SET[i])
+
+_______________________________________________
+...
+Depth 27 -- States: 156103 Transitions: 1379653 Memory used: 292890K
+No deadlocks/errors
+Analysed in: 473ms
+	\end{verbatim}    
+    \end{enumerate}
     
     \item Electrical power can fail at any time.\\
-    \textbf{Answer:}\\
-    It is a liveness property, because it describes that something bad will eventually happen. Our model allows to check this property, to be more precise, we can show, that electrical failure (\verb|plugOff| action) can appear infinitely often:
-     \textbf{add here property}
-      
+    \textbf{Answer:}
+    \begin{enumerate}
+    	\item It is a liveness property, because it describes that something bad will eventually happen.
+    	\item Our model allows to check this property. As it was mentioned in our model description, our pump model doesn't make differense between cases when pump was plugged off from AC or an electrical failure happened.
+    	\item Yes, it is true. We can show, that electrical failure (\verb|plugOff| action) can appear infinitely often.
+    	
+    	\begin{verbatim}
+    	assert ELECTRICAL_FAILURE_AT_ANY_TIME = []<> plugOff
+    	_________________________________________
+    	-- States: 390726 Transitions: 4734710 Memory used: 200917K
+    	No LTL Property violations detected.
+    	LTL Property Check in: 2064ms
+    	\end{verbatim}
+    \end{enumerate}
+     
+
+    \item If the backup battery power fails, pumping will not occur on any line.\\
+    \textbf{Answer:}
+    \begin{enumerate}
+    \item It is safety property. According to our specification pump can dispense fluids if it works from power
+    socket (electricity) or battery in case if battery is not empty. Another words, nothing wrong (pumping on any line) will
+    not occur in case backup battery power fails.
+ 
+    \item Our model allows to check this property. According to our assumption, backup battery fail is represented by fluent
+    $DISCHARGED$ and can occur in two cases:\\
+    1. If pump works from electricity with empty battery and electricity fails by \textbf{Check it:} $plugOffToEmptyBattery$
+    $plug\_off$ action.\\
+    2. If pump works from battery and battery become empty during pumping (by double $discharge$ action).
+    We can fix this issue and continue dispense by using $chargeBattery$ or $plugIn$ action.\\
+    \textbf{Check it:} Assert or Property NODISPENSE tells us that $dispense$ action is never available during battery fail.
+    \begin{verbatim}
+    fluent DISCHARGED = <plugOffToEmptyBattery, {chargeBattery, plugIn}>
+    assert NODISPENSE = [](DISCHARGED -> !line[i:RangeLine].dispense)
+    \end{verbatim}
     
-    \item If the backup battery power fails, pumping will not occur on any line.
+    \item NODISPENSE property is not violated in our model. LTSA output.
+    \begin{verbatim}
+    Violated.
+    \end{verbatim} 
+    \end{enumerate}    
+    
+    
     \item It is always possible to resume pumping after a failure.
     \item An alarm will sound on any line failure (blockage, pinching, empty fluid, or
 whatever failures you model).\\
     \textbf{Answer:}
-\\
-a) safety property for empty fluid - in this case, will be alarm\\
-b) during the LINE process\\
-c) we check this using "when" condition inside of LINE process (by comparing values of volume and rate)
+    \begin{enumerate}
+    	\item It's liveness property. Here we are checking for possible failures of the line - thus, something bad may happens.
+		\item Our model allows to check this property during the LINE process at all.
+		\item Yes, we check this using "property" in LTSA. Here is the code and log of composing model:
+\begin{verbatim}
+property SAFE_DISPENSE
+=(medicineEnded -> refillAfterError -> SAFE_DISPENSE).
 
-
+Composing...
+Depth 19093 -- States: 10000 Transitions: 68357 Memory used: 24181K
+..........................................................
+-- States: 162500 Transitions: 1373754 Memory used: 145534K
+Composed in 1528ms
+State Space:
+\end{verbatim}
+	\end{enumerate}
     \item In the absence of errors the pump will continue to pump until the
-treatment is finished.
-\\
-    \textbf{Answer:}\\
-a) ? (using previous)\\
-b) (only for case with empty fluid)\\
-c) (similarly)
+treatment is finished.\\
+    \textbf{Answer:} 
+    \begin{enumerate}
+    	\item It is a safety property, because it asserts that nothing bad happens during execution.
+    	\item Our model allows to check this from the begin of the dispense of the medicine until the medicine ended 
+    	(we assume that the full medicine bag is a standard treatment dose. Therefore, if $medicineEnded$ action happened, we can say that treatment ended).
+    	\item Yes, it is true. Here is the assert and LTSA output of the check.
+\begin{verbatim}
+assert PUMPING_MEDICINE = [](forall[i:RangeLine] 
+((!DISCHARGED && !PINCHED[i] && !PLUGGED[i] 
+-> <>line[i].dispense) U MEDICINE_ENDED[i]))
+
+Composition:
+LTL Property Check...
+-- States: 10000 Transitions: 90966 Memory used: 72307K
+.........
+-- States: 1337568 Transitions: 30886156 Memory used: 214135K
+No LTL Property violations detected.
+LTL Property Check in: 18319ms
+\end{verbatim}
+	\end{enumerate}
     \item The system never deadlocks.\\
     \textbf{Answer:}
     \begin{verbatim}
     Composition:
-EVERYTHING = PUMP || line.1:LINE || line.2:LINE || line.1:ALARM || line.2:ALARM || BATTERY || line.1:SAFE_DISPENSE || line.2:SAFE_DISPENSE
+EVERYTHING = PUMP || line.1:LINE || line.2:LINE || line.1:ALARM 
+|| line.2:ALARM || BATTERY || line.1:SAFE_DISPENSE || line.2:SAFE_DISPENSE
 State Space:
  4 * 102 * 102 * 6 * 6 * 3 * 2 * 2 = 2 ** 26
 Composing...
@@ -109,7 +186,47 @@ Depth 9779 -- States: 90000 Transitions: 769373 Memory used: 106446K
 Composed in 974ms
     \end{verbatim}
     As we can see system is not in a deadlock anytime.
+    
     \item Two other properties of your choosing.
+    
+    \begin{itemize}
+    \item The main action, dispense, may be made infinitely often (there is no irreversible problems after which it is impossible to make a dispense)
+    
+    \textbf{Answer:}
+    \begin{enumerate}
+    	\item It is a safety property, because it asserts that nothing bad happens during execution. In this case, that it is impossible to get into loop from which it is impossible to make a dispense.
+    	\item  Our model allows to check the property. 
+    	\item Yes, it is true. Here is the property and LTSA output.
+    	\begin{verbatim}
+    	
+    	assert INFINITE_DISPENSE = []<> line[i:RangeLine].dispense
+    	 \end{verbatim}
+    	
+    \item	There is more specific version: if there is necessary amount of medicine, dispense, may be made infinitely often (there is no irreversible problems)
+    
+    \begin{verbatim}
+    	fluent ENOUGH_MEDICINE[i:RangeLine] =
+    	<{line[i].refillAfterError, line[i].refill}, line[i].medicineEnded>
+    	assert CONTINUE_DISPENSING =
+    	forall[i:RangeLine] [](ENOUGH_MEDICINE[i] -> [] <>line[i].dispense)
+    	
+    	\end{verbatim}
+    	
+    	\item Additional check that we used in our model: battery can not charge if the pump is not connected to AC
+    	
+    	 \begin{verbatim}
+    	fluent PUMP_CONNECTED_TO_AC =
+    	<plugIn, {plugOff, plugOffToEmptyBattery}>
+    	assert CHARGE_ONLY_FROM_BATTERY  = 
+    	(charge -> ! PUMP_CONNECTED_TO_AC )
+    	
+    \end{verbatim}
+    \end{enumerate}
+    \end{itemize}
+     
+    
+    
+    
 \end{enumerate}
 
 Now come up with two more properties that are not in the above list, and check them.
