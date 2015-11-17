@@ -98,7 +98,32 @@ Analysed in: 473ms
      
       
     
-    \item If the backup battery power fails, pumping will not occur on any line.
+    \item If the backup battery power fails, pumping will not occur on any line.\\
+    \textbf{Answer:}
+    \begin{enumerate}
+    \item It is safety property. According to our specification pump can dispense fluids if it works from power
+    socket (electricity) or battery in case if battery is not empty. Another words, nothing wrong (pumping on any line) will
+    not occur in case backup battery power fails.
+ 
+    \item Our model allows to check this property. According to our assumption, backup battery fail is represented by fluent
+    $DISCHARGED$ and can occur in two cases:\\
+    1. If pump works from electricity with empty battery and electricity fails by \textbf{Check it:} $plugOffToEmptyBattery$
+    $plug\_off$ action.\\
+    2. If pump works from battery and battery become empty during pumping (by double $discharge$ action).
+    We can fix this issue and continue dispense by using $chargeBattery$ or $plugIn$ action.\\
+    \textbf{Check it:} Assert or Property NODISPENSE tells us that $dispense$ action is never available during battery fail.
+    \begin{verbatim}
+    fluent DISCHARGED = <plugOffToEmptyBattery, {chargeBattery, plugIn}>
+    assert NODISPENSE = [](DISCHARGED -> !line[i:RangeLine].dispense)
+    \end{verbatim}
+    
+    \item NODISPENSE property is not violated in our model. LTSA output.
+    \begin{verbatim}
+    Violated.
+    \end{verbatim} 
+    \end{enumerate}    
+    
+    
     \item It is always possible to resume pumping after a failure.
     \item An alarm will sound on any line failure (blockage, pinching, empty fluid, or
 whatever failures you model).\\

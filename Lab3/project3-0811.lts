@@ -184,12 +184,15 @@ assert ELECTRICAL_FAILURE_AT_ANY_TIME = []<> plugOff
 
 //Nikita
 //3.If the backup battery power fails, pumping will not occur on any line.
-fluent DISCHARGED = <dischargedFully, {charge, changeBattery}>
-assert NODISPENSE = []!(<>DISCHARGED -> X dispense)
+fluent DISCHARGED = <plugOffToEmptyBattery, {chargeBattery, plugIn}>
+assert NODISPENSE = [](DISCHARGED -> !line[i:RangeLine].dispense)
 
 //Nikita
 //4.It is always possible to resume pumping after a failure.
-fluent MEDICINE_ENDED = <medicineEnded, refillAfterError>
+fluent MEDICINE_ENDED[i:RangeLine] = <line[i].medicineEnded, line[i].refillAfterError>
+fluent PINCHED[i:RangeLine] = <line[i].pinched, line[i].unpinched>
+fluent PLUGGED[i:RangeLine] = <line[i].plugged, line[i].unplugged>
+assert RESUMEDISPENCE = [](exists[i:RangeLine](MEDICINE_ENDED[i] || PINCHED[i] || PLUGGED[i] -> <>line[i].dispence))
 
 //Aleksandr
 //5.An alarm will sound on any line failure (blockage, pinching, empty fluid, or
