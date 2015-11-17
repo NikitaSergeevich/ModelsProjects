@@ -125,7 +125,7 @@ emergencyTurnOff -> BACKUPALARMON
 |electricalFailureFixed -> BACKUPALARMOFF
 ),
 BACKUPALARMON = (
-backupAlarm2 -> BACKUPALARMON
+backupAlarm -> BACKUPALARMON
 |electricalFailureFixed -> BACKUPALARMOFF
 ).
 
