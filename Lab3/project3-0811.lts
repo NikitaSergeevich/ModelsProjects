@@ -1,121 +1,154 @@
-const LineNum = 2
-range RangeLine = 1..LineNum
+const NumberOfLines = 2
+range LinesRange = 1..NumberOfLines
 
-const FullBattery = 2 	// Pump uses battery with charge is enough for more than 4 hours
-const LowBattery = 1 	// Pump uses battery with charge is enough for less than 4 hours
-const EmptyBattery = 0 	// Battery is empty
-range BatteryMode =  EmptyBattery..FullBattery
 
-//
-// States of power source
-// Assumption: 20% of battery is enough for 4 hours of working 
+// Assumption 1: 20% of battery is enough for 4 hours of working 
 // (according to requirements from 
 // "Generic Infusion Pump Hazard Analysis and Safety Requirements")
-//
+
+const EmptyBattery = 0 	// Battery is empty
+const LowBattery = 1 	// Pump uses battery with charge is enough for less than 4 hours
+const FullBattery = 2 	// Pump uses battery with charge is enough for more than 4 hours
+
+range BatteryState =  EmptyBattery..FullBattery
+
 const Electricity = 0 	// Pump uses AC power
 const Battery = 1 	// Battery mode
 range PowerMode = Electricity .. Battery
 
-//Pump on/off
+// on/off
 const Off = 0
 const On = 1
 range OnOff = Off..On
 
-PUMP = TURNEDOFF[Battery][FullBattery],  //initial state
+//Assumption 2. When we change the battery, the battery is fully charged.
 
-TURNEDOFF[p:PowerMode][b:BatteryMode] = 
-(when (p==Electricity || b > 0) turnOn -> P[p][b]
-|when (p==Electricity) plugOff -> TURNEDOFF[Battery][b]
-|when (p==Battery) plugIn -> TURNEDOFF[Electricity][b]
+POWERSUPPLY = PUMPOFF[Battery][FullBattery],  //initial state
+
+PUMPOFF[p:PowerMode][b:BatteryState] = 
+
+// Change power mode
+(when (p == Electricity || b > 0) turnOn -> PUMPON[p][b]
+|when (p == Electricity) plugOff -> PUMPOFF[Battery][b]
+|when (p == Battery) plugIn -> PUMPOFF[Electricity][b]
+
+//EmptyBattery
+|when (p == Electricity && b == EmptyBattery) charge ->  PUMPOFF[p][LowBattery]
+|when (b == EmptyBattery) changeBattery ->  PUMPOFF[p][FullBattery]
 
 //LowBattery
-|when (p==Electricity && b == LowBattery) charge -> TURNEDOFF[p][LowBattery]
-|when (p==Battery && b == LowBattery) discharge -> TURNEDOFF[p][EmptyBattery]
-|when (b == LowBattery) changeBattery ->  TURNEDOFF[p][FullBattery]
-//EmptyBattery
-|when (p==Electricity && b == EmptyBattery) charge ->  TURNEDOFF[p][LowBattery]
-|when (b == EmptyBattery) changeBattery ->  TURNEDOFF[p][FullBattery]
+|when (p == Electricity && b == LowBattery) charge -> PUMPOFF[p][LowBattery]
+|when (p == Battery && b == LowBattery) dischargeBattery -> PUMPOFF[p][EmptyBattery]
+|when (b == LowBattery) changeBattery ->  PUMPOFF[p][FullBattery]
+
 //FullBattery
-|when (p==Battery && b == FullBattery) discharge ->  TURNEDOFF[p][LowBattery]
-|when (b == FullBattery) changeBattery ->  TURNEDOFF[p][FullBattery]
+|when (p == Electricity && b == FullBattery) charge ->  PUMPOFF[p][FullBattery]
+|when (p == Battery && b == FullBattery) dischargeBattery ->  PUMPOFF[p][LowBattery]
+|when (b == FullBattery) changeBattery ->  PUMPOFF[p][FullBattery]
 ),
 
-P[p:PowerMode][b:BatteryMode] = (
-// Change power mode
-when (p==Electricity && b == EmptyBattery) plugOffToEmptyBattery -> TURNEDOFF[p][b]
-|when (p==Electricity && b != EmptyBattery) plugOff -> P[Battery][b]
-|when (p==Battery) plugIn-> P[Electricity][b]
-//OnOff. Different actions in order to make share actions
-|turnOff -> TURNEDOFF[p][b]
-//LowBattery
-|when (p==Electricity && b == LowBattery) charge -> P[p][LowBattery]
-|when (p==Battery && b == LowBattery) discharge -> dischargedFully  -> TURNEDOFF[p][EmptyBattery]
-|when (b == LowBattery) changeBattery ->  P[p][FullBattery]
-//EmptyBattery
-|when (p==Electricity && b == EmptyBattery) charge ->  P[p][LowBattery]
-|when (b == EmptyBattery) changeBattery ->  P[p][FullBattery]
-//FullBattery
-|when (p!=Electricity && b == FullBattery) discharge ->  P[p][LowBattery]
-|when (b == FullBattery) changeBattery ->  P[p][FullBattery]
-)
+PUMPON[p:PowerMode][b:BatteryState] = (
 
+// Change power mode.
+
+//Action leads to electrical failure 
+when (p == Electricity && b == EmptyBattery) emergencyTurnOff -> PUMPOFF[p][b]
+
+|when (p == Electricity && b != EmptyBattery) plugOff -> PUMPON[Battery][b]
+|when (p == Battery) plugIn-> PUMPON[Electricity][b]
+
+// OnOff. Different actions in order to make shared actions
+|turnOff -> PUMPOFF[p][b]
+
+// EmptyBattery
+|when (p == Electricity && b == EmptyBattery) charge ->  PUMPON[p][LowBattery]
+|when (b == EmptyBattery) changeBattery ->  PUMPON[p][FullBattery]
+
+// LowBattery
+
+//Action leads to electrical failure 
+|when (p == Battery && b == LowBattery) emergencyTurnOff  -> PUMPOFF[p][EmptyBattery]
+
+|when (b == LowBattery) changeBattery ->  PUMPON[p][FullBattery]
+|when (p == Electricity && b == LowBattery) charge -> PUMPON[p][LowBattery]
+
+// FullBattery
+|when (p == Electricity && b == FullBattery) charge ->  PUMPON[p][FullBattery]
+|when (p != Electricity && b == FullBattery) dischargeBattery ->  PUMPON[p][LowBattery]
+|when (b == FullBattery) changeBattery ->  PUMPON[p][FullBattery]
+)
 . 
 
-//Number of errors which can occur in the line
-const NoErrors = 1
-const MaxErrors = 2
-range Errors = NoErrors..MaxErrors
+ALARMMEDICINE = (turnOn -> ALARMMEDICINEOFF),
 
-ALARMMEDICINE = (turnOn -> SILENCEALARMMEDICINE),
-SILENCEALARMMEDICINE = (errorMedicine -> LOUDALARMMEDICINE[1]
+ALARMMEDICINEOFF = (errorMedicine -> ALARMMEDICINEON
 |turnOff -> ALARMMEDICINE
-|dischargedFully -> ALARMMEDICINE
-|plugOffToEmptyBattery -> ALARMMEDICINE
+|emergencyTurnOff -> ALARMMEDICINE
  ),
-LOUDALARMMEDICINE[s:OnOff] = (
-when (s==1) medicineAlarm -> LOUDALARMMEDICINE[1]
-|reduceErrorMedicine -> SILENCEALARMMEDICINE
-|when (s==1) muteMedicineAlarm -> LOUDALARMMEDICINE[0]
+ 
+ALARMMEDICINEON = (
+medicineAlarm -> ALARMMEDICINEON
+|medicineErrorFixed -> ALARMMEDICINEOFF
+|muteMedicineAlarm -> ALARMMEDICINEMUTED
 |turnOff -> ALARMMEDICINE
-|dischargedFully -> ALARMMEDICINE
-|plugOffToEmptyBattery -> ALARMMEDICINE).
+|emergencyTurnOff -> ALARMMEDICINE),
 
-ALARMPINCHED = (turnOn -> SILENCEALARMPINCHED),
-SILENCEALARMPINCHED = (errorPinched -> LOUDALARMPINCHED[1]
+ALARMMEDICINEMUTED = (
+medicineErrorFixed -> ALARMMEDICINEOFF
+|turnOff -> ALARMMEDICINE
+|emergencyTurnOff -> ALARMMEDICINE).
+
+ALARMPINCHED = (turnOn -> ALARMPINCHEDOFF),
+
+ALARMPINCHEDOFF = (errorPinched -> ALARMPINCHEDON
 |turnOff -> ALARMPINCHED
-|dischargedFully -> ALARMPINCHED
-|plugOffToEmptyBattery -> ALARMPINCHED),
-LOUDALARMPINCHED[s:OnOff] = (
-when (s==1) pinchedAlarm -> LOUDALARMPINCHED[1]
-|when (s==1) mutePinchedAlarm -> LOUDALARMPINCHED[0]
-|reduceErrorPinched -> SILENCEALARMPINCHED
+|emergencyTurnOff -> ALARMPINCHED),
+
+ALARMPINCHEDON = (
+pinchedAlarm -> ALARMPINCHEDON
+|mutePinchedAlarm -> ALARMPINCHEDMUTED
+|reduceErrorPinched -> ALARMPINCHEDOFF
 |turnOff -> ALARMPINCHED
-|dischargedFully -> ALARMPINCHED
-|plugOffToEmptyBattery -> ALARMPINCHED).
+|emergencyTurnOff -> ALARMPINCHED),
 
-ALARMPLUGGED = (turnOn -> SILENCEALARMPLUGGED),
-SILENCEALARMPLUGGED = (errorPlugged -> LOUDALARMPLUGGED[1]
+ALARMPINCHEDMUTED = (
+reduceErrorPinched -> ALARMPINCHEDOFF
+|turnOff -> ALARMPINCHED
+|emergencyTurnOff -> ALARMPINCHED).
+
+ALARMPLUGGED = (turnOn -> ALARMPLUGGEDOFF),
+
+ALARMPLUGGEDOFF = (errorPlugged -> ALARMPLUGGEDON
 |turnOff -> ALARMPLUGGED
-|dischargedFully -> ALARMPLUGGED
-|plugOffToEmptyBattery -> ALARMPLUGGED),
-LOUDALARMPLUGGED[s:OnOff] = (
-when (s==1) pluggedAlarm -> LOUDALARMPLUGGED[1]
-|when (s==1) mutePluggedAlarm -> LOUDALARMPLUGGED[0]
-|reduceErrorPlugged -> SILENCEALARMPLUGGED
+|emergencyTurnOff -> ALARMPLUGGED),
+
+ALARMPLUGGEDON = (
+pluggedAlarm -> ALARMPLUGGEDON
+|mutePluggedAlarm -> ALARMPLUGGEDMUTED
+|reduceErrorPlugged -> ALARMPLUGGEDOFF
 |turnOff -> ALARMPLUGGED
-|dischargedFully -> ALARMPLUGGED
-|plugOffToEmptyBattery -> ALARMPLUGGED).
+|emergencyTurnOff -> ALARMPLUGGED),
 
+ALARMPLUGGEDMUTED = (
+reduceErrorPlugged -> ALARMPLUGGEDOFF
+|turnOff -> ALARMPLUGGED
+|emergencyTurnOff -> ALARMPLUGGED).
 
-SOUND2 = SILENCEDSOUND2,
-SILENCEDSOUND2 = (
-alarm2 -> ALARMSOUND2
-|reduceAlarm2 -> SILENCEDSOUND2
+//Assumption 3. Backup alarm is not related with power supply of the pump. 
+
+BACKUPALARM = BACKUPALARMOFF,
+
+BACKUPALARMOFF = (
+emergencyTurnOff -> BACKUPALARMON
+|powerErrorFixed -> BACKUPALARMOFF
 ),
-ALARMSOUND2 = (
-backupAlarm2 -> ALARMSOUND2
-|reduceAlarm2 -> SILENCEDSOUND2
+
+BACKUPALARMON = (
+backupAlarm -> BACKUPALARMON
+|powerErrorFixed -> BACKUPALARMOFF
 ).
+
+
 
 const MaxFluid = 10
 range Volume = 0..MaxFluid
@@ -127,11 +160,10 @@ const MinRate = 1
 const MaxRate = 2
 range Rate = LineOff..MaxRate
 
-//Assumption - if rate equals 3, we will not send only 2
-//Assumption - if line has  2 problems(e.g. pinched and unplugged) then when pinched would be resolved Line firstly would go
-//to status LineOk and then to Unplugged.This process would flow automatically.
-//Assumption - if you could dispense 1 medicine and you change the mode to 2 medicine (in other word, if rate is more than volume), medicine ended would happen and you will need to refill
-// Refill line1 after medicine ended kills ability to refill line 2
+//Assumption 4. If rate equals 2 and volume equals 1. Medicine would not be dispensed.
+//Assumption 5. If line has 2 problems(e.g. pinched and unplugged) then when pinched error would be resolved line would identify unplugged error. 
+//We assume that this consequence of steps would flow automatically.
+
 LINE = L[MaxFluid][LineOff],
 L[f:Volume][r:Rate] = (
 refill -> L[MaxFluid][r]
@@ -142,45 +174,34 @@ refill -> L[MaxFluid][r]
 |when (r > 0) pinched -> unpinched -> L[f][r]
 |when (r > 0) plugged -> unplugged -> L[f][r]
 |when (r > -1) turnOff -> L[f][LineOff]
-|when (r > -1) dischargedFully -> L[f][LineOff]
-|when (r > -1) plugOffToEmptyBattery -> L[f][LineOff]
-|when (r > 0) stopLine -> L[f][NotSet] 
+|when (r > -1) emergencyTurnOff -> L[f][LineOff]
+|when (r > -1) emergencyTurnOff -> L[f][LineOff]
+|when (r > 0) stopDispense -> L[f][NotSet] 
 |when (r > -1) setRate[rNew:MinRate..MaxRate] -> L[f][rNew] 
 ).
-
-||EVERYTHING = (PUMP || line[1..2]:LINE || line[1..2]:ALARMMEDICINE || line[1..2]:ALARMPINCHED || line[1..2]:ALARMPLUGGED 
- || line[1..2]:SAFE_DISPENSE || SOUND2) //|| SOUND2)  // ||line[1..2]:Settings_Before_Dispense)
-/{forall[i:RangeLine]  
+||PUMP = (POWERSUPPLY || line[1..2]:LINE || line[1..2]:ALARMMEDICINE || line[1..2]:ALARMPINCHED || line[1..2]:ALARMPLUGGED 
+ || line[1..2]:SAFE_DISPENSE || BACKUPALARM)  
+/{forall[i:LinesRange]  
 {
 turnOn/line[i].turnOn,
 turnOff/line[i].turnOff,
-dischargedFully/line[i].dischargedFully,
-plugOffToEmptyBattery/line[i].plugOffToEmptyBattery,
+emergencyTurnOff/line[i].emergencyTurnOff,
+emergencyTurnOff/line[i].emergencyTurnOff,
 line[i].medicineEnded/line[i].errorMedicine,
 line[i].refillAfterError/line[i].reduceErrorMedicine,
 line[i].pinched/line[i].errorPinched,
 line[i].unpinched/line[i].reduceErrorPinched,
 line[i].plugged/line[i].errorPlugged,
 line[i].unplugged/line[i].reduceErrorPlugged,
-dischargedFully/alarm2,
-plugOffToEmptyBattery/alarm2,
-plugIn/reduceAlarm2,
-changeBattery/reduceAlarm2
-}}
-.
+plugIn/powerErrorFixed,
+changeBattery/powerErrorFixed
+}}.
 
-
-//line[i:RangeLine].
 //Artur
 //1.The pump cannot start pumping without the operator first confirming the settings on the pump.
-fluent SETTINGS_ARE_SET[i:RangeLine] = <line[i].setRate[j:MinRate..MaxRate], {turnOff, plugOffToEmptyBattery}>
-assert DISPENSE_ONLY_AFTER_SETTINGS = forall[i:RangeLine] [](line[i].dispense -> SETTINGS_ARE_SET[i])
-
 
 //Artur
 //2.Electrical power can fail at any time.
-assert ELECTRICAL_FAILURE_AT_ANY_TIME = []<> plugOff
-
 
 //Nikita
 //3.If the backup battery power fails, pumping will not occur on any line.
@@ -192,31 +213,26 @@ assert NODISPENSE = [](DISCHARGED -> !line[i:RangeLine].dispense)
 fluent MEDICINE_ENDED[i:RangeLine] = <line[i].medicineEnded, line[i].refillAfterError>
 fluent PINCHED[i:RangeLine] = <line[i].pinched, line[i].unpinched>
 fluent PLUGGED[i:RangeLine] = <line[i].plugged, line[i].unplugged>
-assert RESUMEDISPENCE = [](exists[i:RangeLine](MEDICINE_ENDED[i] || PINCHED[i] || PLUGGED[i] -> <>line[i].dispence))
+assert RESUMEDISPENCE = [](forall[i:RangeLine](MEDICINE_ENDED[i] || PINCHED[i] || PLUGGED[i] -> <>line[i].dispence))
 
 //Aleksandr
 //5.An alarm will sound on any line failure (blockage, pinching, empty fluid, or
 //whatever failures you model)
-property SAFE_DISPENSE    
-=(medicineEnded->refillAfterError -> SAFE_DISPENSE).
+assert FAILURE_ALARM = [](forall[i:RangeLine](MEDICINE_ENDED[i] || PINCHED[i] || PLUGGED[i] -> <>HZ))
 
 //Aleksandr
 //6. In the absence of errors the pump will continue to pump until the
 // treatment is finished.
-//fluent MEDICINE_ENDED = <medicineEnded, refillAfterError>
-assert PUMPING_MEDICINE = [](dispense U MEDICINE_ENDED)
+assert PUMPING_MEDICINE = [](forall[i:RangeLine] ((!DISCHARGED && !PINCHED[i] && !PLUGGED[i] -> <>line[i].dispense) U MEDICINE_ENDED[i]))
 
 //7.Artem. The system never deadlocks.(done)
 
-//8.Artem. (two properties)
+//8.Artur. (two properties)
+// The main action, dispense, may be made infinitely often (there is no irreversible problems)
+assert INFINITE_DISPENSE = []<> line[i:RangeLine].dispense
 
-// ASK TAs
-//property Settings_Before_Dispense    
-//=(setRate[rNew:MinRate..MaxRate] -> (dispense -> Settings_Before_Dispense | setRate[r2New:MinRate..MaxRate] ->Settings_Before_Dispense )).
 
-// ASK TAs
-//=(line[i:RangeLine].setRate[1..MaxRate]->line[i].dispense -> SAFE_DISPENCE).
-//=(line[i:RangeLine].medicineEnded->alarm -> line[i].refill  ->SAFE_DISPENCE).
+// If rate was set before medicine in a line ended, the line can continue dispense after refilling 
+fluent ENOUGH_MEDICINE[i:RangeLine] = <{line[i].refillAfterError, line[i].refill}, line[i].medicineEnded>
+assert CONTINUE_DISPENSING = forall[i:RangeLine] [] ((SETTINGS_ARE_SET[i] && ENOUGH_MEDICINE[i]) -> <> line[i].dispense)
 
-// Liveness property
-progress DISPENSE = {turnOn}
