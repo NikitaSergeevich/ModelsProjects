@@ -48,6 +48,14 @@ As always, you will need to pick a level of abstraction appropriate for this mod
 you to figure out what are the significant aspects of the system that should be included in your
 model.
 
+\textbf{Answer:}\\
+\textbf{Level of abstraction}\\
+
+Pump is a life critical object and one of the base conditions of pump work is power supply. That's why it's important to ensure that changing from electricity to battery or vice versa is performed correctly. In our specification, pump can not work from electricity while it is not plugged in. Pump would start work automatically from the battery, if only battery is not fully discharged. According to our specification the caregiver should be notified about low battery charge when pump is turned on. \\
+Another life critical actions are running out of medicine and when line become pinched or plugged. Specification has current volume of fluids into each line. Alarm would inform the caregiver in case if medicine ended or when line is pinched or plugged.  \\
+According to description of pump, speed of medicine delivery can be changed. To resolve this problem we added the rate for our model which control the amount of delivering medicine per one time period. \\
+In our model refill action can be performed but it will change amount of medicine to the maximum. The discrete value for refillment will take additional action and even with 5 levels of volume for 2 lines, there will be 10 additional actions that will complicate work with the model. That's why we choose this level of abstraction. \\
+
 %___________________________________________________________________________________________________
 \head{Task 2 (32 points): Stating and Checking Properties}
 %___________________________________________________________________________________________________
