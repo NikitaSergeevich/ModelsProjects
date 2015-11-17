@@ -278,14 +278,81 @@ Now come up with two more properties that are not in the above list, and check t
  Z (Z/Eves and Fuzz), and FSP (LTSA).  In this part of the report we would like you to reflect on that experience.
  For each of these notations write a paragraph or two explaining:
 \begin{enumerate}
- \item What are the strengths of this notation and its tools?  Under what situations would you
-recommend its use? Why?
+ \item What are the strengths of this notation and its tools?  Under what situations would you recommend its use? Why?
  \item What are the weaknesses of this notation and its tools. Under what
 situations would you not not recommend its use? Why?
  \item With respect to this notation, what is
 the single most-important future development that would be needed to make it more generally useful
 to practitioners?
-
 \end{enumerate}
 
+
+\begin{enumerate}
+\item \textbf{Pre-post conditions}
+
+\textbf{Strengths}
+
+\begin{enumerate}
+\item Visible dividing between pre- and postconditions, we can specify the input and output of each action in clear way.
+\item Predicate Logic knowledge gives a lot of operations to properly specify different logic of PreAndPost conditions.
+\item Simplicity because of using well-know predicate logic and ability to understand whether particular action might or not might be made because of preconditions
+\item Some languages like Eiffel support operational contracts with similar logic because it is easier to find errors using contracts. Therefore, knowledge of pre- and postconditions technique may make the Eiffel lessons more understandable and pleasant for Innopolis students.
+\item Ability to get result from an action or to get exception may be quite useful in many cases.
+\end{enumerate}
+
+
+\textbf{Weaknesses}
+
+\begin{enumerate}
+\item There are no any ways to model concurrency in these models. 
+\item We have made a little research and have not found any appropriate tools for checking correctness of Pre and Post conditions models in general way.
+\item With growing of variables number it is harder to write new actions because you have to explicitly say new state for every available variable.
+\end{enumerate}
+\item \textbf{Z}
+
+\textbf{Strengths}
+\begin{enumerate}
+\item Tools like z-community and fuzz has type checkers which help to identify syntax errors.
+\item We can describe explicitly every needed state of the model in terms of pre- and postconditions using schemas, every schema is described by variables.
+\item Important that we can state precondition for every transition which explicitly define state of particular schema in which we can apply this action. Also we can define postcondition to define state of shema after transition, what is relative to action’s return value.
+\item Schema invariants show conditions which are always true for the model, it gives ability to not rewrite some common conditions into all states.
+\item Differences between read-only and write modes ($\Theta$ and $\Xi$) helps to reduce number of occasional errors. 
+\item Predicate Logic knowledge gives a lot of operations to properly specify different logic of actions.
+\item Such operations like Promotion or Framing Schema simplifies the final model.
+\item Schemas help to reuse abstractions and shared components
+\end{enumerate}
+
+\textbf{Weaknesses}
+\begin{enumerate}
+\item Tools like z-community and fuzz can’t check if some states of the system are unreachable, we have no opportunity to somehow move from state to state using defined state transitions to check some particular behaviour. 
+\item It is quite hard to create some sequence of actions so that one should go after another. There are some tricks for it (like incrementing some counter and checking it in preconditions), but it is not a common option.
+\item Z notation is not supposed to show work of concurrent processes.
+\end{enumerate}
+
+\item \textbf{FSP and LTSA}
+
+\textbf{Strengths}
+\begin{enumerate}
+\item Ability to model concurrent processes.
+\item Ability to check desired properties of the system, such as safety and liveness properties
+\item Ability to check properties using Temporal Propositions and built-in syntax for creating fluents needed to use the logic.
+\item Ability to see the possible sequences of actions in the LTSA tool
+\item Visualisation of simple state machines, good for educational purposes.
+
+\end{enumerate}
+\textbf{Weaknesses}
+\begin{enumerate}
+\item Only actions are shown in the system, we do not know in what state we are now using the animator.
+\item We couldn’t match LTSA model with real time, it is a problem of state machines. 
+\item 	FSP doesn’t allow to make probabilistic actions, that some action will happen with some probability. We only may show priorities of actions for checks.
+\item 	Parameters inside the processes result in fast state space growing, so several processes (3-4) having several parameters (4-5) united with parallel composition lead to impossibility of model checking because of stack overflow.
+\item 	LTSA tool doesn’t allow to visualise big graphs (with many states).
+\item 	LTSA tool interface is not very convenient to use. For example, in animation mode it doesn’t show actions in table layout and makes long list of actions. In addition, some important hotkeys such as “Ctrl+Z” do not work.
+\item 	Using fluent propositions we can not use sequence of several actions as an initiating or terminating actions. For example, show that if system in a $Full$ state, after two $discharge$ actions system will go into $Empty$ state and if system in a $Medium$ state, it will go into $Empty$ state after the first $discharge$ action.
+	
+\end{enumerate}
+
+LTSA is the best choice to show concurrent processes and check their properties. Checking the order of operations is quite convenient. However, processes should not be very complicated.
+
+\end{enumerate}
 \end{document}
