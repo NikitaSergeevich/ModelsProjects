@@ -1,3 +1,11 @@
+// Custom menu that shows actioons that pump user can perform
+menu ControlMenu = 
+{turnOn, turnOff, plugIn, plugOff, changeBattery, muteMedicineAlarm, emergencyPlugOff,
+line[i:1..LineNum].refill, line[i:1..LineNum].refillAfterError, line[i:1..LineNum].stopDispense, 
+dispense, line[i:1..LineNum].setRate[MinRate..MaxRate],
+line[i:1..LineNum].unpinched, line[i:1..LineNum].unplugged,
+line[i:1..LineNum].muteMedicineAlarm, line[i:1..LineNum].mutePinchedAlarm, line[i:1..LineNum].mutePluggedAlarm}
+
 const LineNum = 2
 range RangeLine = 1..LineNum
 
