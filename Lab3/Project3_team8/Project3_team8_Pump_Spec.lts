@@ -1,4 +1,4 @@
-// Custom menu that shows actioons that pump user can perform
+// Custom menu that shows actions that pump user can perform
 menu ControlMenu = 
 {turnOn, turnOff, plugIn, plugOff, changeBattery, muteMedicineAlarm, emergencyPlugOff,
 line[i:1..LineNum].refill, line[i:1..LineNum].refillAfterError, line[i:1..LineNum].stopDispense, 
