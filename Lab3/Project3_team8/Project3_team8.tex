@@ -14,7 +14,7 @@
 \rule{\textwidth}{1.5pt} \\ \rule[10pt]{\textwidth}{1pt}\\
 MSIT-SE-M-01\hfill Models of Software Systems\\[3ex]
 {\Large\bf Project 3: Concurrency}\\[3ex]
-Team 8 \hfill {\bf Due: November 18, 2015} \rule{\textwidth}{1pt}
+Team 8: Nikita Avrelin, Artur Badretdinov, Alexandr Kozhevnikov, Artem Ostapchuk \hfill {\bf Due: November 18, 2015} \rule{\textwidth}{1pt}
 \\\rule[9.5pt]{\textwidth}{1.5pt}
 \end{center}
 
@@ -87,11 +87,11 @@ In our specification there are four types of alarm which are related to each lin
 4. when backup battery failure happened: two possible variants - pump is plugged off when battery is empty or battery discharge from low battery to empty battery.\\
  Errors 1-3 are connected with lines as a result pump can identify error on particular line. We decided, that it would be convenient for nurse to identify different types of alarms and realize in which line has issues, in order fix problem quickly. Also, errors 1-3 are connected with power mode. When pump is turned off 1-3 alarms would also turned off. We assumed that when pump would be turned on, alarms will occur again automatically after the initial problem reveals. If backup battery failure happen, backup alarm would identify this failure. We assumed that backup alarm works even if there are no power source in the pump \textbf{[A1]}.
 All alarms can be muted, in order when nurse saw the problem and don't want to be disturbed by alarm. And all alarms have action alarm, which would happen until the error will not be fixed.\\
-There is some time, approximately a second, before starting the alarm. If the problem is solved to the moment (for example, line is unpinched), the alarm will not be made\textbf{[A3*]}.
+There is some time, approximately a second, before starting the alarm. If the problem is solved to the moment (for example, line is unpinched), the alarm will not be made\textbf{[A3*]}.\\
 
 \textbf{User interface} \\
 
-The only setting that is shown in our model is a rate setting. Rate for each line has to be set independently, so a line can not start dispensing medicine before the rate will be set. Every dispense takes amount of medicine that is set in the current rate of this line. The behaviour is described previously in context of line.
+The only setting that is shown in our model is a rate setting. Rate for each line has to be set independently, so a line can not start dispensing medicine before the rate is set. Every dispense takes amount of medicine that is set in the current rate of this line. The behaviour is described previously in context of line.
 
 
 
