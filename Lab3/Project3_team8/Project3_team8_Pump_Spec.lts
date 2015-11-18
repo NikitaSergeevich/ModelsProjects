@@ -195,11 +195,21 @@ assert NODISPENSE = [](DISCHARGED -> !line[i:RangeLine].dispense)
 fluent MEDICINE_ENDED[i:RangeLine] = <line[i].medicineEnded, line[i].refillAfterError>
 fluent PINCHED[i:RangeLine] = <line[i].pinched, line[i].unpinched>
 fluent PLUGGED[i:RangeLine] = <line[i].plugged, line[i].unplugged>
-assert RESUMEDISPENCE = forall[i:RangeLine][](MEDICINE_ENDED[i] -> line[i].medicineEnded)
+assert RESUMEDISPENCE = forall[i:RangeLine]
+[](MEDICINE_ENDED[i] -> <> line[i].dispense
+|| PINCHED[i] -> <> line[i].dispense
+|| PLUGGED[i] -> <> line[i].dispense
+|| DISCHARGED -> <> line[i].dispense
+)
 
 //5.An alarm will sound on any line failure (blockage, pinching, empty fluid, or
 //whatever failures you model)
-assert FAILURE_ALARM = forall[i:RangeLine] [] (MEDICINE_ENDED[i] -> <> line[i].medicineAlarm )
+assert FAILURE_ALARM = forall[i:RangeLine] 
+[] (MEDICINE_ENDED[i] && X line[i].medicineAlarm 
+|| PINCHED[i] && X line[i].pinchedAlarm
+|| PLUGGED[i] && X line[i].pluggedAlarm
+|| DISCHARGED && X backupAlarm
+)
 
 //6. In the absence of errors the pump will continue to pump until the
 // treatment is finished.
