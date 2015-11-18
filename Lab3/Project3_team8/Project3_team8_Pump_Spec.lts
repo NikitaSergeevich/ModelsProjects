@@ -205,10 +205,10 @@ assert RESUMEDISPENCE = forall[i:RangeLine]
 //5.An alarm will sound on any line failure (blockage, pinching, empty fluid, or
 //whatever failures you model)
 assert FAILURE_ALARM = forall[i:RangeLine] 
-[] (MEDICINE_ENDED[i] && X line[i].medicineAlarm 
-|| PINCHED[i] && X line[i].pinchedAlarm
-|| PLUGGED[i] && X line[i].pluggedAlarm
-|| DISCHARGED && X backupAlarm
+[] (MEDICINE_ENDED[i] -> <> line[i].medicineAlarm 
+|| PINCHED[i] -> <> line[i].pinchedAlarm
+|| PLUGGED[i] -> <> line[i].pluggedAlarm
+|| DISCHARGED -> <> backupAlarm
 )
 
 //6. In the absence of errors the pump will continue to pump until the

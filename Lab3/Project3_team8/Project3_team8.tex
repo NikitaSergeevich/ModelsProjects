@@ -51,7 +51,7 @@ model.\\
 \textbf{Answer:}\\
 
 \textbf{Level of abstraction}\\
-Below, \textbf{[A1*]} means that it is an assumption that will be used further and \textbf{[A1]} means that it is a reference for the assumption \#1 marked by asterisk.
+Below, the letter A with number in square brackets, \textbf{[A0*]}, means that it is an assumption that will be used further and \textbf{[A0]} means that it is a reference for the assumption \#1 marked by asterisk.
 
 Pump is a life critical object and one of the base conditions of pump work is power supply. That's why it's important to ensure that changing from electricity to battery or vice versa is performed correctly. In our specification, pump can not work from electricity while it is not plugged in. Pump would start work automatically from the battery, if only battery is not fully discharged. According to our specification the caregiver should be notified about low battery charge if the pump is turned on. If the pump doesn’t have a power at all (not AC, empty battery), special simple backup alarm works (like a beeper in PC, it powers from additional small battery that is not able to give power to other pump’s components) \textbf{[A1*]}\\
 Another life critical actions are running out of medicine and when line become pinched or plugged. Specification has current volume of fluids into each line. Alarm would inform the caregiver in case if medicine ended or when line is pinched or plugged. \\
@@ -71,6 +71,7 @@ Below is a more detailed description of the model divided into this logical part
 
 First, pump may be turned on turned off using actions $turnOff$ or $turnOn$. The pump knows state of electricity: is it connected or not. To minimize number of actions and make the model more understandable we decided to treat $plugOff$ action like pump is plugged off from the AC or pump stops when the electrical failure in the building happens.
 According to our specification, the pump have information about charge of the battery: $EmptyBattery$, $LowBattery$, $FullBattery$. Action $charge$ can be performed for the battery only if pump is pigged to the AC power and is not fully charged. Action $discharge$ (go to the lower level of charge) can be performed only when pump is plugged off the AC. Also action $dischargeBatteryWhilePluggedOff$ can be used to empty battery when pump is working. In every case you can $changeBattery$ into the new one.
+If the pump is plugged off or if electrical failure happens (what is the same action $plugOff$), the pump goes into the battery mode\textbf{[A2*]}.
 If the pump is in the battery mode and battery is empty, pump turns off and may start working only after $plugIn$ and then $charge$ actions are made or the $changeBattery$ action executed.\\
 
 \textbf{Line} \\
@@ -83,8 +84,10 @@ In our specification there are four types of alarm which are related to each lin
 1. when the line is pinched.\\
 2. when the line is plugged.\\
 3. when medicine in the line is ended and alarm notifies that the medicine bag should be refilled.\\
-4. when backup battery failure happened: two possible variants - pump is plugged off when battery is empty or battery discharge from low battery to empty battery. (If electrical failure would happen we assumed that pump would automatically switch to the battery). Errors 1-3 are connected with lines as a result pump can identify error on particular line. We decided, that it would be convenient for nurse to identify different types of alarms and realize in which line has issues, in order fix problem quickly. Also, errors 1-3 are connected with power mode. When pump is turned off 1-3 alarms would also turned off. We assumed that when pump would be turned on, alarms will occur again automatically. If backup battery failure happen, backup alarm would identify this failure. We assumed that backup alarm works even if there are no power source in the pump.
+4. when backup battery failure happened: two possible variants - pump is plugged off when battery is empty or battery discharge from low battery to empty battery.\\
+ Errors 1-3 are connected with lines as a result pump can identify error on particular line. We decided, that it would be convenient for nurse to identify different types of alarms and realize in which line has issues, in order fix problem quickly. Also, errors 1-3 are connected with power mode. When pump is turned off 1-3 alarms would also turned off. We assumed that when pump would be turned on, alarms will occur again automatically after the initial problem reveals. If backup battery failure happen, backup alarm would identify this failure. We assumed that backup alarm works even if there are no power source in the pump \textbf{[A1]}.
 All alarms can be muted, in order when nurse saw the problem and don't want to be disturbed by alarm. And all alarms have action alarm, which would happen until the error will not be fixed.\\
+There is some time, approximately a second, before starting the alarm. If the problem is solved to the moment (for example, line is unpinched), the alarm will not be made\textbf{[A3*]}.
 
 \textbf{User interface} \\
 
@@ -113,8 +116,8 @@ property. It would be particularly helpful if you include in your write-up the s
     \item It is a safety property, because it asserts that nothing bad happens during execution. In this case, that it is
     impossible to start the pump without confirming the settings.
     \item  Our model allows to check the property. As it was mentioned in our model description, we have modelled only one
-    type of settings - setting a rate for a concrete infusion line. Therefore, \verb|dispense| action happens only after
-    \verb|setRate[i]| action.
+    type of settings - setting a rate for a concrete infusion line. Therefore, $dispense$ action happens only after
+    $setRate[i]$ action.
     \item Yes, it is true. Here is the property and LTSA output.
 	\begin{verbatim}
 	fluent SETTINGS_ARE_SET[i:RangeLine] = 
@@ -135,10 +138,11 @@ property. It would be particularly helpful if you include in your write-up the s
     \item It is a liveness property, because it describes that something bad will eventually happen.
     \item Our model allows to check this property. As it was mentioned in our model description, our pump model doesn't make
     difference between cases when pump was plugged off from AC or an electrical failure happened.
-    \item Yes, it is true. We can show, that electrical failure (\verb|plugOff| action) can appear infinitely often.
+    \item Yes, it is true. We can show, that electrical failure ($plugOff$ action) can appear infinitely often.
     \begin{verbatim}
     assert ELECTRICAL_FAILURE_AT_ANY_TIME = []<> plugOff
     _________________________________________
+    ...
     -- States: 390726 Transitions: 4734710 Memory used: 200917K
     No LTL Property violations detected.
     LTL Property Check in: 2064ms
@@ -165,7 +169,7 @@ property. It would be particularly helpful if you include in your write-up the s
     fluent DISCHARGED = <{emergencyPlugOff, emergencyDischarge}, {changeBattery, plugIn}>
     assert NODISPENSE = [](DISCHARGED -> !line[i:RangeLine].dispense)
     ______________________________________________________
-    Depth 21 -- States: 80000 Transitions: 673835 Memory used: 58561K
+    ...
     Depth 23 -- States: 81492 Transitions: 682019 Memory used: 59618K
     No deadlocks/errors
     Analysed in: 414ms
@@ -198,9 +202,7 @@ property. It would be particularly helpful if you include in your write-up the s
       || DISCHARGED -> <> line[i].dispense
       )
      __________________________________________________________
-    -- States: 370000 Transitions: 4297076 Memory used: 42270K
-    -- States: 380000 Transitions: 4405020 Memory used: 47613K
-    -- States: 390000 Transitions: 4509834 Memory used: 37128K
+    ...
     -- States: 390726 Transitions: 4517989 Memory used: 49377K
     No LTL Property violations detected.
     LTL Property Check in: 4437ms
@@ -211,15 +213,21 @@ property. It would be particularly helpful if you include in your write-up the s
     \textbf{Answer:}
     \begin{enumerate}
     	\item It's liveness property. Here we are checking that something good eventually happens - alarm will sound after a failure.
-		\item Our model allows us to check the property, but it is not true. It is because of [A2]
-		\item 
+		\item Our model allows us to check the property. Fluents needed for assert are described above. 
+		\item It is not true. It is because of assumption \textbf{[A3]}. In addition, because of concurrent essense of the model, there may happen another action before the alarm will be raised, even if the problematic part (pinched line, for example) is not working.
 		\begin{verbatim}
-assert FAILURE_ALARM = forall[i:RangeLine] 
-[] (MEDICINE_ENDED[i] -> <> line[i].medicineAlarm 
-|| PINCHED[i] -> <> line[i].pinchedAlarm
-|| PLUGGED[i] -> <> line[i].pluggedAlarm
-|| DISCHARGED -> <> backupAlarm
-)
+		assert FAILURE_ALARM = forall[i:RangeLine] 
+		[] (MEDICINE_ENDED[i] -> <> line[i].medicineAlarm 
+		|| PINCHED[i] -> <> line[i].pinchedAlarm
+		|| PLUGGED[i] -> <> line[i].pluggedAlarm
+		|| DISCHARGED -> <> backupAlarm
+		)
+		_____________________________________________________________
+		...
+		-- States: 162985 Transitions: 1364054 Memory used: 645215K
+		No LTL Property violations detected.
+		LTL Property Check in: 489ms
+
 		\end{verbatim}
 	\end{enumerate}
 	
@@ -234,41 +242,36 @@ assert FAILURE_ALARM = forall[i:RangeLine]
     	\begin{verbatim}
     	assert PUMPING_MEDICINE = forall[i:RangeLine] []((!DISCHARGED && 
     	!PINCHED[i] && !PLUGGED[i] -> <>line[i].dispense) U MEDICINE_ENDED[i])
-    	
-    	Composition:
-    	LTL Property Check...
-    	-- States: 10000 Transitions: 90966 Memory used: 72307K
-    	.........
+    	_____________________________________________________
+	    ...
     	-- States: 1337568 Transitions: 30886156 Memory used: 214135K
     	No LTL Property violations detected.
     	LTL Property Check in: 18319ms
 \end{verbatim}
 	\end{enumerate}
     \item The system never deadlocks.\\
-    \textbf{Answer:}
+    \textbf{Answer:} 
+    Yes, it is true. Here is the compilation output ans output of safety checker.
     \begin{verbatim}
     Composition:
-    PUMP = POWERSUPPLY || line.1:LINE || line.2:LINE || 
-    line.1:ALARMMEDICINE || line.2:ALARMMEDICINE ||
-    line.1:ALARMPINCHED || line.2:ALARMPINCHED ||
-    line.1:ALARMPLUGGED || line.2:ALARMPLUGGED || 
-    BACKUPALARM || NODISPENSE
+    PUMP = POWERSUPPLY || line.1:LINE || line.2:LINE || line.1:ALARMMEDICINE || line.2:ALARMMEDICINE || line.1:ALARMPINCHED || line.2:ALARMPINCHED || line.1:ALARMPLUGGED || line.2:ALARMPLUGGED || BACKUPALARM
     State Space:
-    11 * 91 * 91 * 4 * 4 * 4 * 4 * 4 * 4 * 2 * 2 = 2 ** 32
+    11 * 91 * 91 * 4 * 4 * 4 * 4 * 4 * 4 * 2 = 2 ** 31
     Composing...
-    Depth 27155 -- States: 10000 Transitions: 85166 Memory used: 57055K
-    Depth 36738 -- States: 20000 Transitions: 161710 Memory used: 51790K
-    Depth 45841 -- States: 30000 Transitions: 239872 Memory used: 66500K
-    Depth 47770 -- States: 40000 Transitions: 313351 Memory used: 56950K
-    Depth 40947 -- States: 50000 Transitions: 387912 Memory used: 70896K
-    Depth 28055 -- States: 60000 Transitions: 474745 Memory used: 85809K
-    Depth 14217 -- States: 70000 Transitions: 562525 Memory used: 77421K
-    Depth 1646 -- States: 80000 Transitions: 664961 Memory used: 71068K
-    -- States: 81492 Transitions: 682019 Memory used: 95744K
-    Composed in 819ms
+    Depth 27155 -- States: 10000 Transitions: 85166 Memory used: 201051K
+    Depth 36738 -- States: 20000 Transitions: 161710 Memory used: 214893K
+    Depth 45841 -- States: 30000 Transitions: 239872 Memory used: 230465K
+    Depth 47770 -- States: 40000 Transitions: 313351 Memory used: 246089K
+    Depth 40947 -- States: 50000 Transitions: 387912 Memory used: 259930K
+    Depth 28055 -- States: 60000 Transitions: 474745 Memory used: 277233K
+    Depth 14217 -- States: 70000 Transitions: 562525 Memory used: 292805K
+    Depth 1646 -- States: 80000 Transitions: 664961 Memory used: 311842K
+    -- States: 81492 Transitions: 682019 Memory used: 341642K
+    Composed in 513ms
+    ________________________________
+    No deadlocks/errors
     \end{verbatim}
-    As we can see system is not in a deadlock any time.
-    
+       
     \item Two other properties of your choosing.
     
     \begin{itemize}
@@ -283,6 +286,11 @@ assert FAILURE_ALARM = forall[i:RangeLine]
     	\item Yes, it is true. Here is the property and LTSA output.
     	\begin{verbatim}    	
     	assert INFINITE_DISPENSE = []<> line[i:RangeLine].dispense
+    	___________________________________
+    	...
+    	-- States: 244476 Transitions: 2809568 Memory used: 246986K
+    	No LTL Property violations detected.
+    	LTL Property Check in: 1120ms
     	 \end{verbatim}
     	 
     	 \item There is more specific version: if there is necessary amount of medicine, dispense, may be made infinitely
@@ -293,6 +301,12 @@ assert FAILURE_ALARM = forall[i:RangeLine]
     	<{line[i].refillAfterError, line[i].refill}, line[i].medicineEnded>
     	assert CONTINUE_DISPENSING =
     	forall[i:RangeLine] [](ENOUGH_MEDICINE[i] -> [] <>line[i].dispense)
+    	______________________________________________________
+    	...
+    	-- States: 725809 Transitions: 11383091 Memory used: 547025K
+    	No LTL Property violations detected.
+    	LTL Property Check in: 3886ms
+    	
     	\end{verbatim}
     	
     	\item Additional check that we used in our model: battery can not charge if the pump is not connected to AC
@@ -302,6 +316,11 @@ assert FAILURE_ALARM = forall[i:RangeLine]
     	<plugIn, {plugOff, plugOffToEmptyBattery}>
     	assert CHARGE_ONLY_FROM_BATTERY  = 
     	(charge -> ! PUMP_CONNECTED_TO_AC )
+    	______________________________________________
+    	...
+    	-- States: 81492 Transitions: 763511 Memory used: 251204K
+    	No LTL Property violations detected.
+    	LTL Property Check in: 253ms
     	\end{verbatim}
     	\end{enumerate}
     	\end{itemize}
