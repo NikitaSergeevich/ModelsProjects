@@ -68,6 +68,7 @@ ALARMMEDICINEOFF = (errorMedicine -> ALARMMEDICINEON
  ),
 ALARMMEDICINEON = (
 medicineAlarm -> ALARMMEDICINEON
+//reduced means error fixed
 |reduceErrorMedicine -> ALARMMEDICINEOFF
 |muteMedicineAlarm -> ALARMMEDICINEMUTED
 |turnOff -> ALARMMEDICINE
@@ -75,6 +76,7 @@ medicineAlarm -> ALARMMEDICINEON
 |emergencyPlugOff -> ALARMMEDICINE
 ),
 ALARMMEDICINEMUTED = (
+//reduced means error fixed
 reduceErrorMedicine -> ALARMMEDICINEOFF
 |turnOff -> ALARMMEDICINE
 |emergencyDischarge -> ALARMMEDICINE
@@ -89,11 +91,13 @@ ALARMPINCHEDOFF = (errorPinched -> ALARMPINCHEDON
 ALARMPINCHEDON = (
 pinchedAlarm -> ALARMPINCHEDON 
 |mutePinchedAlarm -> ALARMPINCHEDMUTED
+//reduced means error fixed
 |reduceErrorPinched -> ALARMPINCHEDOFF
 |turnOff -> ALARMPINCHED
 |emergencyDischarge -> ALARMPINCHED
 |emergencyPlugOff -> ALARMPINCHED),
 ALARMPINCHEDMUTED = (
+//reduced means error fixed
 reduceErrorPinched -> ALARMPINCHEDOFF
 |turnOff -> ALARMPINCHED
 |emergencyDischarge -> ALARMPINCHED
@@ -107,11 +111,13 @@ ALARMPLUGGEDOFF = (errorPlugged -> ALARMPLUGGEDON
 ALARMPLUGGEDON = (
 pluggedAlarm -> ALARMPLUGGEDON
 |mutePluggedAlarm -> ALARMPLUGGEDMUTED
+//reduced means error fixed
 |reduceErrorPlugged -> ALARMPLUGGEDOFF
 |turnOff -> ALARMPLUGGED
 |emergencyDischarge -> ALARMPLUGGED
 |emergencyPlugOff -> ALARMPLUGGED),
 ALARMPLUGGEDMUTED = (
+//reduced means error fixed
 reduceErrorPlugged -> ALARMPLUGGEDOFF
 |turnOff -> ALARMPLUGGED
 |emergencyDischarge -> ALARMPLUGGED
