@@ -362,7 +362,6 @@ to practitioners?
 \item Ability to get result from an action or to get exception may be quite useful in many cases.
 \end{enumerate}
 
-
 \textbf{Weaknesses}
 
 \begin{enumerate}
@@ -370,26 +369,36 @@ to practitioners?
 \item We have made a little research and have not found any appropriate tools for checking correctness of Pre and Post conditions models in general way.
 \item With growing of variables number it is harder to write new actions because you have to explicitly say new state for every available variable.
 \end{enumerate}
+
+\textbf{Conclusion and suggestions}\\
+This technique is useful when there is no many state variables in the state machine. In our opinion, with more than 10 of them work becomes quite messy. Pobability of occasional error, due to the missing some variable state, increases. \\
+One of the most important issues, in our opinion, is bounded with lack of a tool that can simplify work with the method, making at least syntactic checks.
+
 \item \textbf{Z}
 
 \textbf{Strengths}
 \begin{enumerate}
 \item Tools like z-community and fuzz has type checkers which help to identify syntax errors.
 \item We can describe explicitly every needed state of the model in terms of pre- and postconditions using schemas, every schema is described by variables.
-\item Important that we can state precondition for every transition which explicitly define state of particular schema in which we can apply this action. Also we can define postcondition to define state of shema after transition, what is relative to action�s return value.
+\item Important that we can state precondition for every transition which explicitly define state of particular schema in which we can apply this action. Also we can define postcondition to define state of shema after transition, what is relative to action's return value.
 \item Schema invariants show conditions which are always true for the model, it gives ability to not rewrite some common conditions into all states.
 \item Differences between read-only and write modes ($\Theta$ and $\Xi$) helps to reduce number of occasional errors. 
 \item Predicate Logic knowledge gives a lot of operations to properly specify different logic of actions.
 \item Such operations like Promotion or Framing Schema simplifies the final model.
-\item Schemas help to reuse abstractions and shared components
+\item Schemas help to reuse abstractions and shared components. Schema calculus adds rich abilities to minimize size of code in contrast with usual pre-post conditions systems.
+\item Convenient, common to programming languages way in working with attributes.
 \end{enumerate}
 
 \textbf{Weaknesses}
 \begin{enumerate}
-\item Tools like z-community and fuzz can�t check if some states of the system are unreachable, we have no opportunity to somehow move from state to state using defined state transitions to check some particular behaviour. 
+\item Tools like z-community and fuzz can't check if some states of the system are unreachable, we have no opportunity to somehow move from state to state using defined state transitions to check some particular behaviour. 
 \item It is quite hard to create some sequence of actions so that one should go after another. There are some tricks for it (like incrementing some counter and checking it in preconditions), but it is not a common option.
 \item Z notation is not supposed to show work of concurrent processes.
 \end{enumerate}
+
+\textbf{Conclusion and suggestions}\\
+Z expands main ideas of pre-post conditions systems, adding such important features as reusing the components using schema calculus and many other features, named in Strenghts section.  It is not useful to model concurrent processes, because it can't show simultaneous work of different processes.
+\\ Main feature, that may make specification better, is a built-in ability to show sequences of action calls and their concurrent execution. For example, it may be shown as a usual method call from the another action with special way to show concurrency, as in programming languages.\\
 
 \item \textbf{FSP and LTSA}
 
@@ -413,8 +422,9 @@ to practitioners?
 \item 	Using fluent propositions we can not use sequence of several actions as an initiating or terminating actions. For example, show that if system in a $Full$ state, after two $discharge$ actions system will go into $Empty$ state and if system in a $Medium$ state, it will go into $Empty$ state after the first $discharge$ action.
 	
 \end{enumerate}
-
-LTSA is the best choice to show concurrent processes and check their properties. Checking the order of operations is quite convenient. However, processes should not be very complicated.
+\textbf{Conclusion and suggestions}\\
+ FSP and LTSA tool are the best choice to show concurrent processes and check their properties. Checking the order of operations is quite convenient. However, processes should not be very complicated. If the process is complicated, it should be refined into smaller ones and presented in different abstract levels to give possibility to check properties of different level of abstraction.
+ It would be useful to have some ability to synchronize action calls with some timer and be able to specify actions duration, because usually it makes additional constraints to the model.
 
 \end{enumerate}
 \end{document}
