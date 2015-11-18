@@ -70,7 +70,7 @@ Below is a more detailed description of the model divided into this logical part
 \textbf{Power System} \\
 
 First, pump may be turned on turned off using actions $turnOff$ or $turnOn$. The pump knows state of electricity: is it connected or not. To minimize number of actions and make the model more understandable we decided to treat $plugOff$ action like pump is plugged off from the AC or pump stops when the electrical failure in the building happens.
-According to our specification, the pump have information about charge of the battery: $EmptyBattery$, $LowBattery$, $FullBattery$. Action $charge$ can be performed for the battery only if pump is pigged to the AC power and is not fully charged. Action $discharge$ (go to the lower level of charge) can be performed only when pump is plugged off the AC. Also action $dischargeBatteryWhilePluggedOff$ can be used to empty battery when pump is working. In every case you can $changeBattery$ into the new one.
+According to our specification, the pump has information about charge of the battery: $EmptyBattery$, $LowBattery$, $FullBattery$. Action $charge$ can be performed for the battery only if pump is pigged to the AC power and is not fully charged. Action $discharge$ (go to the lower level of charge) can be performed only when pump is plugged off the AC. Also action $dischargeBatteryWhilePluggedOff$ can be used to empty battery when pump is working. In every case you can $changeBattery$ into the new one.
 If the pump is plugged off or if electrical failure happens (what is the same action $plugOff$), the pump goes into the battery mode\textbf{[A2*]}.
 If the pump is in the battery mode and battery is empty, pump turns off and may start working only after $plugIn$ and then $charge$ actions are made or the $changeBattery$ action executed.\\
 
@@ -292,10 +292,12 @@ property. It would be particularly helpful if you include in your write-up the s
     	No LTL Property violations detected.
     	LTL Property Check in: 1120ms
     	 \end{verbatim}
-    	 
+    	 \end{enumerate}
+    	 \begin{enumerate}
     	 \item There is more specific version: if there is necessary amount of medicine, dispense, may be made infinitely
     	 often (there is no irreversible problems)
-    	 
+    	 \item Our model allows to check the property.
+    	 \item Yes it is true. No property violation.
     	 \begin{verbatim}
     	fluent ENOUGH_MEDICINE[i:RangeLine] =
     	<{line[i].refillAfterError, line[i].refill}, line[i].medicineEnded>
@@ -308,9 +310,11 @@ property. It would be particularly helpful if you include in your write-up the s
     	LTL Property Check in: 3886ms
     	
     	\end{verbatim}
-    	
+    	\end{enumerate}
+    	 \begin{enumerate}
     	\item Additional check that we used in our model: battery can not charge if the pump is not connected to AC
-    	
+    	\item Our model allows to check the property.
+    	 \item Yes it is true. No property violation.
     	 \begin{verbatim}
     	fluent PUMP_CONNECTED_TO_AC =
     	<plugIn, {plugOff, plugOffToEmptyBattery}>
@@ -327,7 +331,6 @@ property. It would be particularly helpful if you include in your write-up the s
     	    
 \end{enumerate}
 
-Now come up with two more properties that are not in the above list, and check them.
 %___________________________________________________________________________________________________
 \head{Task 3 (18 points): Reflection}
 %___________________________________________________________________________________________________
